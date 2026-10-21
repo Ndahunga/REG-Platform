@@ -46,6 +46,10 @@ public class RotationConfiguration {
     @Column(name = "retained_bps", nullable = false, updatable = false)
     private int retainedBps;
 
+    /** Rotated amount per share (e.g. 50,000 of 70,000); null for a split stated only in basis points. */
+    @Column(name = "rotating_unit_amount", precision = 19, scale = 4, updatable = false)
+    private java.math.BigDecimal rotatingUnitAmount;
+
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;
 

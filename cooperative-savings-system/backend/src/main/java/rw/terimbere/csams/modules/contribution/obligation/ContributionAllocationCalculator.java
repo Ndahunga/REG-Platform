@@ -62,6 +62,43 @@ public final class ContributionAllocationCalculator {
         return of(rotating, payment);
     }
 
+    /**
+     * Exact split by amounts: {@code amount x rotatingUnit / unit}, HALF_UP to a whole unit, capped at the amount. Used
+     * when a scheme states its split in money (e.g. 50,000 rotated of 70,000 per share), which basis points cannot hold
+     * exactly. A full payment of n shares lands exactly on n x rotatingUnit.
+     */
+    public static Split splitByUnits(BigDecimal amount, BigDecimal rotatingUnit, BigDecimal unit) {
+        requireNonNegative(amount, "amount");
+        requireUnits(rotatingUnit, unit);
+        BigDecimal rotating;
+        if (rotatingUnit.compareTo(unit) == 0) {
+            rotating = amount;
+        } else {
+            rotating = amount.multiply(rotatingUnit).divide(unit, 0, RoundingMode.HALF_UP);
+            if (rotating.compareTo(amount) > 0) {
+                rotating = amount;
+            }
+        }
+        return of(rotating.setScale(Math.max(amount.scale(), 0), RoundingMode.UNNECESSARY), amount);
+    }
+
+    /** {@link #delta} for an amount-based split: the difference of two cumulative targets, so pieces never drift. */
+    public static Split deltaByUnits(BigDecimal alreadyPaid, BigDecimal payment, BigDecimal rotatingUnit, BigDecimal unit) {
+        requireNonNegative(alreadyPaid, "alreadyPaid");
+        requireNonNegative(payment, "payment");
+        BigDecimal before = splitByUnits(alreadyPaid, rotatingUnit, unit).rotating();
+        BigDecimal after = splitByUnits(alreadyPaid.add(payment), rotatingUnit, unit).rotating();
+        BigDecimal rotating = after.subtract(before).max(BigDecimal.ZERO).min(payment);
+        return of(rotating.setScale(Math.max(payment.scale(), 0), RoundingMode.HALF_UP), payment);
+    }
+
+    private static void requireUnits(BigDecimal rotatingUnit, BigDecimal unit) {
+        if (rotatingUnit == null || unit == null || rotatingUnit.signum() <= 0 || unit.signum() <= 0
+                || rotatingUnit.compareTo(unit) > 0) {
+            throw new IllegalArgumentException("Rotating unit must be positive and not above the contribution unit");
+        }
+    }
+
     private static Split of(BigDecimal rotating, BigDecimal total) {
         // Both parts keep the scale of the amount they came from, so rotating + retained is exactly the amount.
         int scale = Math.max(total.scale(), 0);

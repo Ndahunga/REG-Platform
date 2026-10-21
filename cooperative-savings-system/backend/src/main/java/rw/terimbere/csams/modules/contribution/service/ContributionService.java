@@ -1040,7 +1040,7 @@ public class ContributionService {
         if (contribution.getRotatingBpsSnapshot() == null || contribution.getRotationPeriodId() == null) {
             return null;
         }
-        var split = ContributionAllocationCalculator.split(paid, contribution.getRotatingBpsSnapshot());
+        var split = rw.terimbere.csams.modules.contribution.obligation.ContributionSplits.split(contribution, paid);
         return new ContributionAllocationCalculator.Split(
                 MoneyUtils.scaleForStorage(split.rotating()), MoneyUtils.scaleForStorage(split.retained()));
     }

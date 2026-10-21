@@ -123,7 +123,14 @@ public class ContributionObligationService {
             }
         }
         boolean closed = c.getStatus() == ContributionStatus.WAIVED || c.getStatus() == ContributionStatus.CANCELLED;
-        return build(snapshotted, due, model, rotating, retained, periodId, c.getExpectedAmount(), c.getPaidAmount(), closed);
+        ObligationView view = build(snapshotted, due, model, rotating, retained, periodId, c.getExpectedAmount(), c.getPaidAmount(), closed);
+        if (snapshotted && ContributionSplits.usesUnits(c) && c.getExpectedAmount() != null) {
+            Split exact = ContributionSplits.split(c, c.getExpectedAmount());
+            view = new ObligationView(view.snapshotted(), view.dueDate(), view.overdue(), view.overdueAmount(),
+                    view.operatingModel(), view.rotatingBps(), view.retainedBps(), exact.rotating(), exact.retained(),
+                    view.rotationPeriodId());
+        }
+        return view;
     }
 
     /** The projected obligation of a member who has no stored row yet. Reads only; nothing is created. */
@@ -197,7 +204,8 @@ public class ContributionObligationService {
             UUID configurationId,
             Integer rotatingBps,
             Integer retainedBps,
-            UUID rotationPeriodId) {
+            UUID rotationPeriodId,
+            BigDecimal rotatingUnit) {
 
         void writeTo(Contribution row, Instant at) {
             row.setObligationSnapshotAt(at);
@@ -208,6 +216,7 @@ public class ContributionObligationService {
             row.setRotatingBpsSnapshot(rotatingBps);
             row.setRetainedBpsSnapshot(retainedBps);
             row.setRotationPeriodId(rotationPeriodId);
+            row.setRotatingUnitSnapshot(rotatingUnit);
         }
     }
 
@@ -220,6 +229,7 @@ public class ContributionObligationService {
         Integer rotating = null;
         Integer retained = null;
         UUID periodId = null;
+        BigDecimal rotatingUnit = null;
         if (isRotationModel(ctx.model)) {
             Optional<RotationConfiguration> cfg = ctx.configFor(year, month);
             Optional<RotationPeriod> period = ctx.livePeriodFor(year, month);
@@ -239,13 +249,18 @@ public class ContributionObligationService {
                 configId = cfg.get().getId();
                 rotating = cfg.get().getRotatingBps();
                 retained = cfg.get().getRetainedBps();
+                BigDecimal unitAmount = cooperative.getMonthlyContributionAmount();
+                if (cfg.get().getRotatingUnitAmount() != null && unitAmount != null && unitAmount.signum() > 0
+                        && cfg.get().getRotatingUnitAmount().compareTo(unitAmount) <= 0) {
+                    rotatingUnit = cfg.get().getRotatingUnitAmount();
+                }
             }
             if (period.isPresent()) {
                 periodId = period.get().getId();
             }
         }
         return new Snapshot(
-                cooperative.getMonthlyContributionAmount(), due, ctx.model, configId, rotating, retained, periodId);
+                cooperative.getMonthlyContributionAmount(), due, ctx.model, configId, rotating, retained, periodId, rotatingUnit);
     }
 
     // ------------------------------------------------------------------ explicit materialization
@@ -360,7 +375,7 @@ public class ContributionObligationService {
         BigDecimal rotating = BigDecimal.ZERO;
         BigDecimal retained = amount;
         if (row.getRotatingBpsSnapshot() != null) {
-            Split delta = ContributionAllocationCalculator.delta(paid, amount, row.getRotatingBpsSnapshot());
+            Split delta = ContributionSplits.delta(row, paid, amount);
             rotating = delta.rotating();
             retained = delta.retained();
         }

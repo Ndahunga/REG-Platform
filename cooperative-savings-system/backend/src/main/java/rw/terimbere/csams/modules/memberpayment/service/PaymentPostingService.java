@@ -343,7 +343,7 @@ public class PaymentPostingService {
             rotatingBps = row.getRotatingBpsSnapshot();
             retainedBps = row.getRetainedBpsSnapshot();
             ContributionAllocationCalculator.Split split =
-                    ContributionAllocationCalculator.delta(applied.paidBefore(), amount, rotatingBps);
+                    rw.terimbere.csams.modules.contribution.obligation.ContributionSplits.delta(row, applied.paidBefore(), amount);
             rotating = split.rotating();
             retained = split.retained();
             periodId = period.getId();

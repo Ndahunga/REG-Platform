@@ -43,12 +43,48 @@ public class RotationConfigurationService {
     private final AuditService auditService;
     private final Clock clock;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final rw.terimbere.csams.modules.cooperative.repository.CooperativeRepository cooperativeRepository;
 
     @Transactional
     public ConfigurationResponse create(UUID cooperativeId, ConfigurationRequest request, HttpServletRequest http) {
         UserPrincipal principal = access.requireManage(cooperativeId);
         SchemeOperatingModel model = access.requireRotationModel(cooperativeId);
-        validateSplit(model, request.rotatingBps(), request.retainedBps());
+        java.math.BigDecimal unit = cooperativeRepository.findByIdAndDeletedFalse(cooperativeId)
+                .map(rw.terimbere.csams.modules.cooperative.entity.Cooperative::getMonthlyContributionAmount)
+                .orElse(null);
+        java.math.BigDecimal rotatingUnit = request.rotatingUnitAmount();
+        int rotatingBps;
+        int retainedBps;
+        if (rotatingUnit != null) {
+            if (unit == null || unit.signum() <= 0) {
+                throw new ValidationException(
+                        "Set the contribution per share before stating the split in money",
+                        Map.of("rotatingUnitAmount", "The scheme has no contribution amount per share"));
+            }
+            if (rotatingUnit.compareTo(unit) > 0) {
+                throw new ValidationException(
+                        "The rotated amount cannot exceed the contribution per share",
+                        Map.of("rotatingUnitAmount", "At most " + unit.stripTrailingZeros().toPlainString()));
+            }
+            rotatingBps = rotatingUnit.multiply(java.math.BigDecimal.valueOf(10000))
+                    .divide(unit, 0, java.math.RoundingMode.HALF_UP).intValue();
+            if (rotatingUnit.compareTo(unit) < 0) {
+                rotatingBps = Math.max(1, Math.min(9999, rotatingBps));
+            }
+            retainedBps = 10000 - rotatingBps;
+            if (rotatingUnit.compareTo(unit) == 0) {
+                rotatingUnit = null; // 100% rotating is exact in basis points
+            }
+        } else {
+            if (request.rotatingBps() == null || request.retainedBps() == null) {
+                throw new ValidationException(
+                        "State the split in money or in basis points",
+                        Map.of("rotatingUnitAmount", "Enter the rotated amount per share"));
+            }
+            rotatingBps = request.rotatingBps();
+            retainedBps = request.retainedBps();
+        }
+        validateSplit(model, rotatingBps, retainedBps);
 
         YearMonth effective = YearMonth.of(request.effectiveYear(), request.effectiveMonth());
         if (access.hasBegun(effective)) {
@@ -63,7 +99,10 @@ public class RotationConfigurationService {
                 cooperativeId, effective.getYear(), effective.getMonthValue());
         if (existing.isPresent()) {
             RotationConfiguration found = existing.get();
-            if (found.getRotatingBps() == request.rotatingBps() && found.getRetainedBps() == request.retainedBps()) {
+            if (found.getRotatingBps() == rotatingBps && found.getRetainedBps() == retainedBps
+                    && java.util.Objects.equals(
+                            found.getRotatingUnitAmount() == null ? null : found.getRotatingUnitAmount().stripTrailingZeros(),
+                            rotatingUnit == null ? null : rotatingUnit.stripTrailingZeros())) {
                 return toResponse(found); // an identical retry is a success, not a second row
             }
             throw new ConflictException(
@@ -75,8 +114,9 @@ public class RotationConfigurationService {
                 .cooperativeId(cooperativeId)
                 .effectiveYear(effective.getYear())
                 .effectiveMonth(effective.getMonthValue())
-                .rotatingBps(request.rotatingBps())
-                .retainedBps(request.retainedBps())
+                .rotatingBps(rotatingBps)
+                .retainedBps(retainedBps)
+                .rotatingUnitAmount(rotatingUnit)
                 .createdBy(principal.getId())
                 .createdAt(Instant.now(clock))
                 .build());
@@ -192,6 +232,8 @@ public class RotationConfigurationService {
                 c.getEffectiveMonth(),
                 c.getRotatingBps(),
                 c.getRetainedBps(),
+                c.getRotatingUnitAmount(),
+                null,
                 c.getCreatedBy(),
                 c.getCreatedAt(),
                 deletionBlockedReason == null,

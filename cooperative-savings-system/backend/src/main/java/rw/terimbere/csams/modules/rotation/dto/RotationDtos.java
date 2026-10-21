@@ -17,11 +17,16 @@ public final class RotationDtos {
 
     private RotationDtos() {}
 
+    /**
+     * Either the split in money ({@code rotatingUnitAmount}: rotated RWF per share, the rest of the contribution per share
+     * is retained) or in basis points. Money is exact and preferred; basis points are derived from it for display.
+     */
     public record ConfigurationRequest(
             @NotNull @Min(2000) @Max(2100) Integer effectiveYear,
             @NotNull @Min(1) @Max(12) Integer effectiveMonth,
-            @NotNull @Min(0) @Max(10000) Integer rotatingBps,
-            @NotNull @Min(0) @Max(10000) Integer retainedBps) {}
+            @Min(0) @Max(10000) Integer rotatingBps,
+            @Min(0) @Max(10000) Integer retainedBps,
+            @jakarta.validation.constraints.Positive java.math.BigDecimal rotatingUnitAmount) {}
 
     public record ConfigurationResponse(
             UUID id,
@@ -29,6 +34,10 @@ public final class RotationDtos {
             int effectiveMonth,
             int rotatingBps,
             int retainedBps,
+            /** Rotated RWF per share, when the split was given in money; null otherwise. */
+            java.math.BigDecimal rotatingUnitAmount,
+            /** Retained RWF per share (contribution per share minus rotated); null when the split is in basis points. */
+            java.math.BigDecimal retainedUnitAmount,
             UUID createdBy,
             Instant createdAt,
             /** True when the configuration has not taken effect and nothing was built on it: it may be deleted. */

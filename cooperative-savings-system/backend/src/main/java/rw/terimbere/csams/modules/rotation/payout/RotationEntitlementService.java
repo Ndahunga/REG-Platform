@@ -123,7 +123,7 @@ public class RotationEntitlementService {
             return MoneyUtils.scaleForStorage(BigDecimal.ZERO);
         }
         return MoneyUtils.scaleForStorage(
-                ContributionAllocationCalculator.split(MoneyUtils.scaleForStorage(amount), row.getRotatingBpsSnapshot()).rotating());
+                rw.terimbere.csams.modules.contribution.obligation.ContributionSplits.split(row, MoneyUtils.scaleForStorage(amount)).rotating());
     }
 
     /**
@@ -269,7 +269,7 @@ public class RotationEntitlementService {
             } else if ("ROTATING".equals(snapshot)) {
                 known = known.add(paid);
             } else if (row.getRotatingBpsSnapshot() != null) {
-                known = known.add(ContributionAllocationCalculator.split(MoneyUtils.scaleForStorage(paid), row.getRotatingBpsSnapshot()).rotating());
+                known = known.add(rw.terimbere.csams.modules.contribution.obligation.ContributionSplits.split(row, MoneyUtils.scaleForStorage(paid)).rotating());
             } else {
                 unknown = unknown.add(paid);
             }

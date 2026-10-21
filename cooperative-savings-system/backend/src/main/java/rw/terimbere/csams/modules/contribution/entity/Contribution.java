@@ -121,4 +121,8 @@ public class Contribution extends BaseEntity {
 
     @Column(name = "retained_bps_snapshot", updatable = false)
     private Integer retainedBpsSnapshot;
+
+    /** Rotated amount per share when the scheme states its split in money; the exact basis of this row's split. */
+    @Column(name = "rotating_unit_snapshot", precision = 19, scale = 4, updatable = false)
+    private BigDecimal rotatingUnitSnapshot;
 }
