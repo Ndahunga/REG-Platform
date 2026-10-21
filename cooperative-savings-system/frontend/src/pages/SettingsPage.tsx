@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { selectIsLeadership, selectIsSuperAdmin } from '@/app/store/authSlice'
 import { useAppSelector } from '@/app/store/hooks'
 import { ContributionDueDayCard } from '@/features/contributions'
+import { OperatingModelCard } from '@/features/cooperatives/OperatingModelCard'
 import {
   cooperativeSettingsDefaults,
   toSettingsFormValues,
@@ -250,6 +251,7 @@ export function SettingsPage() {
           </Stack>
         </Box>
       ) : null}
+      {cooperativeId ? <OperatingModelCard cooperativeId={cooperativeId} canManage={canManageDueDay} /> : null}
       {cooperativeId ? <ContributionDueDayCard cooperativeId={cooperativeId} canManage={canManageDueDay} /> : null}
     </Box>
   )

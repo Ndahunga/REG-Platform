@@ -158,6 +158,13 @@ export const adminModuleNavItems: NavItem[] = [
     sidebarGroup: 'operations',
   },
   {
+    // Rotation was only in the member menu, so officers (who get adminModuleNavItems) could not reach it.
+    labelKey: 'nav.rotation',
+    path: ROUTES.rotation,
+    icon: AutorenewIcon,
+    sidebarGroup: 'operations',
+  },
+  {
     labelKey: 'nav.loans',
     path: ROUTES.loans,
     icon: AccountBalanceWalletIcon,
