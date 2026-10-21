@@ -1,0 +1,313 @@
+/* Keyframes, easing, and timing from OuWealth-splash-animation (2).html.
+   The SVG mark keeps the reference orange/white; word lockup uses OuWealth logo blue. */
+
+@import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400;0,500;1,400&display=swap');
+
+@keyframes ouDraw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ouRing {
+  from {
+    stroke-dashoffset: 100;
+    opacity: 0.35;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes ouRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ouTrack {
+  from {
+    opacity: 0;
+    letter-spacing: 0.16em;
+  }
+  to {
+    opacity: 1;
+    letter-spacing: 0.54em;
+  }
+}
+
+@keyframes ouGlow {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes ouSettle {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.035);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ouRuleIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes ouContinuePulse {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.82;
+  }
+}
+
+.ou-splash {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #100e0c;
+  color: #f5f2ee;
+  font-family: Cabin, Candara, 'Gill Sans', sans-serif;
+  color-scheme: dark;
+  user-select: none;
+  touch-action: manipulation;
+  cursor: default;
+}
+
+.ou-splash.is-exiting {
+  opacity: 0;
+  transition: opacity 280ms ease;
+  pointer-events: none;
+}
+
+.ou-splash.is-ready {
+  cursor: pointer;
+}
+
+.ou-splash-glow-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ou-splash-glow {
+  width: 47.5em;
+  height: 47.5em;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(27, 77, 140, 0.34) 0%,
+    rgba(74, 122, 184, 0.12) 42%,
+    rgba(27, 77, 140, 0) 68%
+  );
+  animation: ouGlow 1s 0.85s cubic-bezier(0.22, 0.7, 0.2, 1) both;
+  pointer-events: none;
+}
+
+.ou-splash-fit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  /* 16px reproduces the reference pixel sizes; smaller viewports scale as one unit. */
+  font-size: clamp(8.5px, min(2.15vw, 2.05vh), 16px);
+}
+
+.ou-splash-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.125em;
+}
+
+.ou-splash-mark-wrap {
+  animation: ouSettle 0.65s 1.9s cubic-bezier(0.3, 0.9, 0.25, 1) both;
+}
+
+.ou-splash-mark {
+  display: block;
+  overflow: visible;
+  width: 14.375em;
+  height: 14.375em;
+}
+
+.ou-splash-ring {
+  animation: ouRing 0.8s 0.9s cubic-bezier(0.5, 0, 0.2, 1) both;
+}
+
+.ou-splash-u-1 {
+  animation: ouDraw 0.65s 0.1s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-u-2 {
+  animation: ouDraw 0.65s 0.2s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-u-3 {
+  animation: ouDraw 0.65s 0.3s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-u-4 {
+  animation: ouDraw 0.65s 0.4s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-u-5 {
+  animation: ouDraw 0.65s 0.5s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-u-6 {
+  animation: ouDraw 0.65s 0.6s cubic-bezier(0.4, 0, 0.25, 1) both;
+}
+
+.ou-splash-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875em;
+}
+
+.ou-splash-wealth {
+  font-family: Candara, Cabin, 'Gill Sans', sans-serif;
+  font-size: 4.75em;
+  line-height: 0.92;
+  color: #eaf1fa;
+  letter-spacing: -0.018em;
+  animation: ouRise 0.55s 1.5s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+}
+
+.ou-splash-rule {
+  width: 13.125em;
+  height: 1px;
+  background: #4a7ab8;
+  transform-origin: center;
+  animation: ouRuleIn 0.45s 1.75s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+}
+
+.ou-splash-community {
+  font-family: Candara, Cabin, 'Gill Sans', sans-serif;
+  font-size: 0.9375em;
+  line-height: 1;
+  color: #4a7ab8;
+  letter-spacing: 0.54em;
+  padding-left: 0.5625em;
+  animation: ouTrack 0.6s 1.85s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+}
+
+.ou-splash-tagline {
+  font-family: Candara, Cabin, 'Gill Sans', sans-serif;
+  font-style: italic;
+  font-size: 1.1875em;
+  line-height: 1;
+  color: #8f8880;
+  margin-top: 0.75em;
+  animation: ouRise 0.55s 2.05s cubic-bezier(0.22, 0.8, 0.2, 1) both;
+}
+
+.ou-splash-instant {
+  color: #4a7ab8;
+}
+
+.ou-splash-continue {
+  position: absolute;
+  bottom: max(24px, 4.2vh);
+  margin: 0;
+  padding: 0 16px;
+  text-align: center;
+  font-family: Cabin, Candara, 'Gill Sans', sans-serif;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6f6a63;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ou-splash.is-ready .ou-splash-continue {
+  opacity: 0.72;
+  animation: ouContinuePulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ou-splash-glow,
+  .ou-splash-mark-wrap,
+  .ou-splash-ring,
+  .ou-splash-u-1,
+  .ou-splash-u-2,
+  .ou-splash-u-3,
+  .ou-splash-u-4,
+  .ou-splash-u-5,
+  .ou-splash-u-6,
+  .ou-splash-wealth,
+  .ou-splash-rule,
+  .ou-splash-community,
+  .ou-splash-tagline {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ou-splash-ring,
+  .ou-splash-u-1,
+  .ou-splash-u-2,
+  .ou-splash-u-3,
+  .ou-splash-u-4,
+  .ou-splash-u-5,
+  .ou-splash-u-6 {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .ou-splash-community {
+    letter-spacing: 0.54em !important;
+  }
+
+  .ou-splash.is-ready .ou-splash-continue {
+    animation: none;
+    opacity: 0.72;
+  }
+
+  .ou-splash.is-exiting {
+    transition: opacity 200ms ease;
+  }
+}

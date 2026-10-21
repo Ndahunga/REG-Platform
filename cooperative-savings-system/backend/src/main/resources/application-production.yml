@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 5
+      pool-name: csams-production-pool
+      connection-timeout: 30000
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+
+server:
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+# Production TLS termination: enable HSTS on the reverse proxy (e.g. nginx
+# Strict-Transport-Security), not in the app — local/dev HTTP must not force HSTS.
+app:
+  jwt:
+    refresh-cookie-secure: true
+    refresh-cookie-same-site: None
+  file-storage:
+    type: ${FILE_STORAGE_TYPE:local}
+
+logging:
+  level:
+    root: WARN
+    rw.terimbere.csams: INFO
+    org.springframework.security: WARN

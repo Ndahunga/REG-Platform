@@ -1,0 +1,75 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:csams_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS TIMESTAMPTZ AS TIMESTAMP WITH TIME ZONE\;CREATE DOMAIN IF NOT EXISTS JSONB AS JSON
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  flyway:
+    enabled: true
+  h2:
+    console:
+      enabled: false
+
+app:
+  seed:
+    default-admin: true
+  jwt:
+    access-secret: test-access-secret-must-be-at-least-sixty-four-characters-long-xxxx
+    refresh-secret: test-refresh-secret-must-be-at-least-sixty-four-characters-long-yyy
+    refresh-cookie-secure: false
+  file-storage:
+    type: local
+    base-path: ${java.io.tmpdir}/csams-test-uploads
+  security:
+    auth-rate-limit-enabled: false
+  fines:
+    auto-generate-enabled: false
+  payments:
+    verification:
+      # Older integration tests post payments with recorded evidence only. The strict behaviour (the production default)
+      # is exercised explicitly by the verification tests, which switch it on per test.
+      require-trusted-confirmation: false
+    provider-callback:
+      # All tests share one client address and one application context: the limiter is exercised explicitly by the
+      # callback security tests, which switch it on per test.
+      rate-per-address-per-minute: 0
+      rate-per-channel-per-minute: 0
+  whatsapp:
+    enabled: false
+    access-token: ""
+    phone-number-id: ""
+  mail:
+    enabled: false
+    host: ""
+    from: ""
+  subscription:
+    payment:
+      pending-reuse-minutes: 15
+      pending-abandon-hours: 48
+      reconciliation:
+        enabled: false
+      mtn:
+        enabled: false
+        subscription-key: ""
+        api-user: ""
+        api-key: ""
+        target-environment: sandbox
+        callback-url: ""
+      flutterwave:
+        enabled: false
+        mode: test
+        public-key: ""
+        secret-key: ""
+        secret-hash: ""
+        redirect-url: ""
+        webhook-url: ""
+
+
+logging:
+  level:
+    root: WARN
+    rw.terimbere.csams: INFO

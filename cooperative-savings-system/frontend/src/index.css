@@ -1,0 +1,38 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: inherit;
+}
+
+/*
+ * Hide scrollbar visuals everywhere while keeping every scroll container scrollable (wheel, trackpad, touch, keyboard).
+ * This only hides the bar: it never sets overflow, so existing overflow-x / overflow-y behaviour is unchanged.
+ * Firefox needs scrollbar-width on each scroller, hence the universal selector.
+ */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge / IE */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chromium / Safari */
+}

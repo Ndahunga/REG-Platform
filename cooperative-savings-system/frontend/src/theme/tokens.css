@@ -1,0 +1,62 @@
+:root {
+  --color-orange: #ff7a00;
+  --color-tangerine: #ff5c00;
+  --color-black: #0a0a0a;
+  --color-white: #ffffff;
+  --color-blue: #1b4d8c;
+  --color-primary: #1b4d8c;
+  --color-primary-dark: #143a6b;
+  --color-primary-light: #4a7ab8;
+  --color-secondary: #ff7a00;
+  --color-bg: #ffffff;
+  --color-bg-elevated: #f4f8fd;
+  --color-surface: #ffffff;
+  --color-text: #0a0a0a;
+  --color-text-muted: #4a4a4a;
+  --color-border: #d7e3f4;
+  --color-success: #2e7d32;
+  --color-warning: #ff5c00;
+  --color-error: #c62828;
+  --font-brand: 'Tempus Sans ITC', Georgia, 'Times New Roman', serif;
+  --font-heading: Georgia, 'Times New Roman', serif;
+  --font-body: Candara, Calibri, 'Segoe UI', sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --shadow-soft: 0 8px 28px rgba(27, 77, 140, 0.14);
+}
+
+@keyframes brand-logo-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.brand-logo-enter {
+  transform-origin: center center;
+  animation: brand-logo-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo-enter {
+    animation: none;
+  }
+}
+
+html[data-theme='dark'] {
+  --color-primary: #4a7ab8;
+  --color-primary-dark: #1b4d8c;
+  --color-primary-light: #8fb3dc;
+  --color-secondary: #ff9a3d;
+  --color-bg: #0a0a0a;
+  --color-bg-elevated: #161616;
+  --color-surface: #141414;
+  --color-text: #ffffff;
+  --color-text-muted: #c4c4c4;
+  --color-border: #2e2e2e;
+  --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.45);
+}

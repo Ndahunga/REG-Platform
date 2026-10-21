@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1B4D8C" />
+    <title>Offline — OuWealth Community</title>
+    <style>
+      :root {
+        --blue: #1b4d8c;
+        --paper: #f4f8fd;
+        --ink: #0a0a0a;
+        --muted: #4a4a4a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+        font-family: Candara, Calibri, Georgia, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(ellipse at 20% 0%, rgba(27, 77, 140, 0.16), transparent 50%),
+          linear-gradient(180deg, #ffffff 0%, var(--paper) 100%);
+      }
+      .card {
+        max-width: 28rem;
+        text-align: center;
+      }
+      .mark {
+        width: auto;
+        height: auto;
+        margin: 0 auto 1.25rem;
+        background: transparent;
+        color: inherit;
+      }
+      .mark img {
+        display: block;
+        height: 3.25rem;
+        width: auto;
+        max-width: min(100%, 18rem);
+        margin: 0 auto;
+        object-fit: contain;
+        background: transparent;
+        border: 0;
+        padding: 0;
+      }
+      h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.75rem;
+        font-family: Georgia, 'Times New Roman', serif;
+        letter-spacing: 0.02em;
+        color: var(--ink);
+      }
+      p {
+        margin: 0 0 1.5rem;
+        font-size: 1rem;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1.35rem;
+        background: var(--blue);
+        color: #ffffff;
+        font-family: Candara, Calibri, sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      button:focus-visible {
+        outline: 3px solid rgba(27, 77, 140, 0.45);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="mark">
+        <!-- Light-surface wordmark: this page is a light canvas. Keep in sync with BrandLogo BRAND_LOGO_SRC. -->
+        <img src="/branding/ouwealth-community-logo.png" alt="OuWealth Community" />
+      </div>
+      <p>
+        You are offline. Viewing cached pages may still work, but financial operations require an
+        internet connection to the server.
+      </p>
+      <button type="button" onclick="window.location.reload()">Retry connection</button>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,75 @@
+# Environment and secrets
+.env
+.env.local
+.env.staging
+.env.production
+!.env.example
+**/application-local.yml
+!**/application-local.yml.example
+
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/*.iml
+backend/.idea/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/uploads/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/coverage/
+frontend/*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.staging
+frontend/.env.production
+!frontend/.env.example
+!frontend/.env.local.example
+
+# Uploads (keep structure, ignore content)
+uploads/**/*
+!uploads/**/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test / coverage
+coverage/
+.nyc_output/
+test-results/
+*.lcov
+
+# Docker volumes
+postgres-data/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+*.rej
