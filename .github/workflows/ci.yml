@@ -47,3 +47,50 @@ jobs:
       - run: npx tsc -p tsconfig.app.json --noEmit
       - run: npx vitest run
       - run: npm run build
+  staging-seed:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: csams
+          POSTGRES_USER: csams
+          POSTGRES_PASSWORD: csams
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U csams" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Build backend
+        working-directory: cooperative-savings-system/backend
+        run: mvn -B -ntp -q -DskipTests package
+      - name: Start backend and seed
+        shell: bash
+        env:
+          SPRING_PROFILES_ACTIVE: staging
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_DB: csams
+          POSTGRES_USER: csams
+          POSTGRES_PASSWORD: csams
+          APP_SEED_DEFAULT_ADMIN: "true"
+          SEED_STRICT: "1"
+        run: |
+          pip install openpyxl >/dev/null
+          java -jar cooperative-savings-system/backend/target/csams-backend-*.jar > app.log 2>&1 &
+          export COMRADES_SEED_JSON="$(cat .github/fixtures/sample-scheme.json)"
+          python3 cooperative-savings-system/staging/seed.py 2>&1 | tee seed.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Report seed failures
+        if: failure()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          def esc(s): return s.replace('%','%25').replace('\r','').replace('\n','%0A')
+          seed = open('seed.log').read()[-3500:] if __import__('os').path.exists('seed.log') else 'no seed log'
+          print('::error title=Seed log::' + esc(seed))
+          lines = [l for l in open('app.log', errors='replace') if 'ERROR' in l or 'Exception' in l or 'Caused by' in l]
+          print('::error title=App errors::' + esc(''.join(lines[-40:])[-3500:]))
+          PY

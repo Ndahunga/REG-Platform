@@ -1,0 +1,105 @@
+{
+  "name": "Sample Migrated Scheme",
+  "reg": "SAMPLE-MIG",
+  "unit": 70000,
+  "rotated": 50000,
+  "cutover": "2026-09-10",
+  "openingFunds": 900000,
+  "start": "2026-05",
+  "months": 6,
+  "payoutPerShare": 300000,
+  "cash": 300000,
+  "members": [
+    {
+      "name": "Sam Ple",
+      "username": "sample.one",
+      "shares": 2,
+      "capital": 80000,
+      "contributions": 560000,
+      "rotatedPaid": 400000,
+      "president": true,
+      "turns": [
+        {
+          "month": 1,
+          "shares": 1,
+          "received": 300000
+        },
+        {
+          "month": 6,
+          "shares": 1
+        }
+      ]
+    },
+    {
+      "name": "Tina Test",
+      "username": "sample.two",
+      "shares": 1,
+      "capital": 40000,
+      "contributions": 280000,
+      "rotatedPaid": 200000,
+      "officer": "ACCOUNTANT",
+      "turns": [
+        {
+          "month": 2,
+          "shares": 1,
+          "received": 300000
+        }
+      ]
+    },
+    {
+      "name": "Uma User",
+      "username": "sample.three",
+      "shares": 1,
+      "capital": 40000,
+      "contributions": 280000,
+      "rotatedPaid": 200000,
+      "turns": [
+        {
+          "month": 3,
+          "shares": 1,
+          "received": 300000
+        }
+      ]
+    },
+    {
+      "name": "Vic Vote",
+      "username": "sample.four",
+      "shares": 1,
+      "capital": 40000,
+      "contributions": 280000,
+      "rotatedPaid": 200000,
+      "turns": [
+        {
+          "month": 4,
+          "shares": 1
+        }
+      ]
+    },
+    {
+      "name": "Wes Want",
+      "username": "sample.five",
+      "shares": 1,
+      "capital": 40000,
+      "contributions": 280000,
+      "rotatedPaid": 200000,
+      "turns": [
+        {
+          "month": 5,
+          "shares": 1
+        }
+      ]
+    }
+  ],
+  "loans": [
+    {
+      "Username": "sample.three",
+      "Repayment Type": "Flat",
+      "Loan Amount (RWF)": 100000,
+      "Interest Rate (%)": 2,
+      "Loan Issued Date": "2026-08-01",
+      "Loan Term (Months)": 5,
+      "Amount Paid to Date (RWF)": 0,
+      "Outstanding Principal (RWF)": 100000
+    }
+  ]
+}
