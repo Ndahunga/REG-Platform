@@ -17,7 +17,11 @@ for f in glob.glob("target/surefire-reports/TEST-*.xml") + glob.glob("target/fai
         for kind in ("failure", "error"):
             el = tc.find(kind)
             if el is not None:
-                text = (el.get("message") or "") + " | " + (el.text or "")[:1200]
+                body = el.text or ""
+                causes = [l.strip() for l in body.splitlines() if l.strip().startswith("Caused by")]
+                if "failure threshold" in (el.get("message") or ""):
+                    continue
+                text = (el.get("message") or "")[:600] + " | " + " || ".join(causes[-3:])[:1500] + " | " + body[:400]
                 msgs.append(f"{tc.get('classname')}.{tc.get('name')} [{kind}]: {text}")
 def esc(s):
     return s.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
