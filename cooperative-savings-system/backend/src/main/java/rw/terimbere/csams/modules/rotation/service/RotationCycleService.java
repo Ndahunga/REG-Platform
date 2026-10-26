@@ -179,12 +179,14 @@ public class RotationCycleService {
         cycle.setActivatedBy(principal.getId());
         cycle.setActivatedAt(Instant.now(clock));
         cycleRepository.saveAndFlush(cycle);
-        // The whole cycle is owed from the start: every month's obligation exists now, so a member paid early sees
-        // each month still to contribute (and nobody has to create them month by month).
-        obligationService.materializeMonths(
-                cooperativeId,
-                periods.stream().map(p -> YearMonth.of(p.getPeriodYear(), p.getPeriodMonth())).toList(),
-                principal.getId());
+        // A share-based cycle is owed in full from the start: every month's obligation exists now, so a member paid
+        // early sees each month still to contribute. (Period-collection cycles keep their month-by-month obligations.)
+        if (cycle.isShareBased()) {
+            obligationService.materializeMonths(
+                    cooperativeId,
+                    periods.stream().map(p -> YearMonth.of(p.getPeriodYear(), p.getPeriodMonth())).toList(),
+                    principal.getId());
+        }
         audit(principal, cooperativeId, AuditableAction.ROTATION_CYCLE_ACTIVATE, cycle,
                 "{\"status\":\"DRAFT\"}", "{\"status\":\"ACTIVE\"}", http);
         return toResponse(cycle, periods, true);
