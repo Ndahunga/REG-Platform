@@ -38,6 +38,8 @@ public class LoanSettingsResponse {
     private List<LoanRepaymentComponent> allocationOrder;
     private String currency;
     private List<LoanShareTierResponse> shareTiers;
+    private BigDecimal maxLoanPerShare;
+    private boolean blockWhenContributionOverdue;
     private Instant createdAt;
     private Instant updatedAt;
 }

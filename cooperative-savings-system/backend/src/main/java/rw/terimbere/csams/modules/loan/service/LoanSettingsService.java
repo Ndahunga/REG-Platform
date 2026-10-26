@@ -117,6 +117,14 @@ public class LoanSettingsService {
             settings.setCurrency(cooperative.getCurrency());
         }
 
+        if (Boolean.TRUE.equals(request.getClearMaxLoanPerShare())) {
+            settings.setMaxLoanPerShare(null);
+        } else if (request.getMaxLoanPerShare() != null) {
+            settings.setMaxLoanPerShare(MoneyUtils.scaleForStorage(request.getMaxLoanPerShare()));
+        }
+        if (request.getBlockWhenContributionOverdue() != null) {
+            settings.setBlockWhenContributionOverdue(request.getBlockWhenContributionOverdue());
+        }
         settings = loanSettingsRepository.save(settings);
         if (request.getShareTiers() != null) {
             CooperativeOfficerRoles.requirePresident(
@@ -202,6 +210,8 @@ public class LoanSettingsService {
                 .allocationOrder(LoanAllocationOrder.parse(settings.getAllocationOrder()))
                 .currency(settings.getCurrency())
                 .shareTiers(listShareTiers(settings.getCooperativeId()))
+                .maxLoanPerShare(settings.getMaxLoanPerShare() == null ? null : MoneyUtils.scale(settings.getMaxLoanPerShare()))
+                .blockWhenContributionOverdue(settings.isBlockWhenContributionOverdue())
                 .createdAt(settings.getCreatedAt())
                 .updatedAt(settings.getUpdatedAt())
                 .build();

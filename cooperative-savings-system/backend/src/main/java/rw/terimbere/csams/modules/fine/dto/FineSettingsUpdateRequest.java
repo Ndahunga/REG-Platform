@@ -36,4 +36,9 @@ public class FineSettingsUpdateRequest {
     private Integer graceDays;
 
     private String currency;
+
+    private String penaltyBands;
+    private Boolean perShare;
+    private Integer creditConversionDays;
+    private BigDecimal creditConversionRatePercent;
 }

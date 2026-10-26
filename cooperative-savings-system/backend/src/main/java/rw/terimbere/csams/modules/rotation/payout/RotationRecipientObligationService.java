@@ -52,6 +52,8 @@ public class RotationRecipientObligationService {
     private final UserRepository userRepository;
     private final CooperativeAuthorizationService authorizationService;
     private final Clock clock;
+    private final rw.terimbere.csams.modules.rotation.repository.RotationTurnRepository turnRepository;
+    private final rw.terimbere.csams.modules.membership.repository.MemberOpeningBalanceRepository openingRepository;
 
     public record RecipientPeriod(UUID periodId, int year, int month, RotationPeriodStatus status) {}
 
@@ -114,8 +116,31 @@ public class RotationRecipientObligationService {
                 .filter(p -> p.getStatus() == RotationPeriodStatus.SCHEDULED)
                 .toList();
         Map<UUID, List<RotationPeriod>> asRecipient = new HashMap<>();
+        Map<UUID, RotationPeriod> periodById = new HashMap<>();
+        periods.forEach(p -> periodById.put(p.getId(), p));
+        Set<UUID> sharePeriods = new HashSet<>();
+        Map<UUID, BigDecimal> openingReceived = new HashMap<>();
+        for (var turn : turnRepository.findByCooperativeId(cooperativeId)) {
+            RotationPeriod p = periodById.get(turn.getRotationPeriodId());
+            if (p == null) {
+                continue;
+            }
+            sharePeriods.add(p.getId());
+            asRecipient.computeIfAbsent(turn.getMemberUserId(), k -> new ArrayList<>()).add(p);
+            openingReceived.merge(turn.getMemberUserId(), turn.getOpeningReceivedAmount(), BigDecimal::add);
+        }
         for (RotationPeriod period : periods) {
-            asRecipient.computeIfAbsent(period.getScheduledRecipientUserId(), k -> new ArrayList<>()).add(period);
+            if (!sharePeriods.contains(period.getId())) {
+                asRecipient.computeIfAbsent(period.getScheduledRecipientUserId(), k -> new ArrayList<>()).add(period);
+            }
+        }
+        Map<UUID, BigDecimal> openingPaid = new HashMap<>();
+        for (var o : openingRepository.findByCooperativeId(cooperativeId)) {
+            openingPaid.put(o.getMemberUserId(), o.getOpeningRotationPaid());
+            openingReceived.merge(o.getMemberUserId(), BigDecimal.ZERO, BigDecimal::add);
+            if (o.getOpeningRotationReceived().compareTo(openingReceived.get(o.getMemberUserId())) > 0) {
+                openingReceived.put(o.getMemberUserId(), o.getOpeningRotationReceived());
+            }
         }
         Map<UUID, List<Contribution>> rowsByMember = new HashMap<>();
         for (Contribution row : contributionRepository.findByCooperativeIdAndRotationPeriodIdIsNotNull(cooperativeId)) {
@@ -131,6 +156,7 @@ public class RotationRecipientObligationService {
 
         Set<UUID> members = new HashSet<>(rowsByMember.keySet());
         members.addAll(asRecipient.keySet());
+        members.addAll(openingPaid.keySet());
         if (only != null) {
             members.removeIf(id -> !id.equals(only));
         }
@@ -167,10 +193,14 @@ public class RotationRecipientObligationService {
                     }
                 }
             }
-            BigDecimal payout = received.getOrDefault(member, BigDecimal.ZERO);
+            // Before the cutover counts too: rotated money paid and payouts received while the scheme ran elsewhere.
+            paidRotating = paidRotating.add(openingPaid.getOrDefault(member, BigDecimal.ZERO));
+            BigDecimal payout = received.getOrDefault(member, BigDecimal.ZERO)
+                    .add(openingReceived.getOrDefault(member, BigDecimal.ZERO));
             BigDecimal advance = payout.subtract(paidRotating).max(BigDecimal.ZERO);
             int withoutRow = (int) periods.stream().filter(p -> !periodsWithRow.contains(p.getId())).count();
             List<RecipientPeriod> mine = asRecipient.getOrDefault(member, List.of()).stream()
+                    .distinct()
                     .sorted(Comparator.comparingInt(RotationPeriod::getPeriodYear).thenComparingInt(RotationPeriod::getPeriodMonth))
                     .map(p -> new RecipientPeriod(p.getId(), p.getPeriodYear(), p.getPeriodMonth(), p.getStatus()))
                     .toList();

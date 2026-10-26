@@ -45,6 +45,7 @@ public class RotationController {
 
     private final RotationConfigurationService configurationService;
     private final RotationCycleService cycleService;
+    private final rw.terimbere.csams.modules.rotation.service.RotationMigrationService migrationService;
 
     @PostMapping("/configurations")
     @PreAuthorize("hasAuthority('COOPERATIVE_WRITE')")
@@ -105,6 +106,18 @@ public class RotationController {
             @Valid @RequestBody rw.terimbere.csams.modules.rotation.dto.RotationDtos.ShareCycleCreateRequest request,
             HttpServletRequest http) {
         return ResponseEntity.ok(ApiResponse.ok(cycleService.createShareCycle(cooperativeId, request, idempotencyKey, http)));
+    }
+
+    @PostMapping("/migration")
+    @PreAuthorize("hasAuthority('COOPERATIVE_WRITE')")
+    @Operation(
+            summary = "Migration: import the running rotation (split, cycle with turns already paid, members' rotated money and payouts before the cutover)",
+            description = "Run after the member opening balances were imported. Returns a reconciliation of the rotation cash.")
+    public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.rotation.service.RotationMigrationService.RotationImportResponse>> importRotation(
+            @PathVariable UUID cooperativeId,
+            @Valid @RequestBody rw.terimbere.csams.modules.rotation.service.RotationMigrationService.RotationImportRequest request,
+            HttpServletRequest http) {
+        return ResponseEntity.ok(ApiResponse.ok(migrationService.importRotation(cooperativeId, request, http)));
     }
 
     @PutMapping("/turns/{turnId}/member")

@@ -306,18 +306,20 @@ public class FineService {
 
         for (Contribution contribution : candidates) {
             String automaticKey = automaticSourceKey(cooperativeId, contribution.getId());
-            if (fineRepository.existsByCooperativeIdAndSourceContributionId(cooperativeId, contribution.getId())
-                    || fineRepository.existsByAutomaticSourceKey(automaticKey)) {
-                skippedDuplicates++;
-                continue;
-            }
-
             LocalDate dueDate = dueDateOf(cooperative, contribution);
             int overdueDays = fineCalculationService.computeOverdueDays(
                     dueDate, settings.getGraceDays(), today);
             LocalDate graceEnd = dueDate.plusDays(Math.max(0, settings.getGraceDays()));
             if (!today.isAfter(graceEnd)) {
                 skippedNotOverdue++;
+                continue;
+            }
+            int shares = Math.max(1, contribution.getShareCount() == null ? 1 : contribution.getShareCount());
+            createdCount += chargeCreditConversion(cooperative, settings, contribution, dueDate, today, issuedBy, created);
+            if (fineRepository.existsByCooperativeIdAndSourceContributionId(cooperativeId, contribution.getId())
+                    || fineRepository.existsByAutomaticSourceKey(automaticKey)) {
+                raiseBandedFine(settings, contribution, overdueDays, shares);
+                skippedDuplicates++;
                 continue;
             }
 
@@ -331,8 +333,15 @@ public class FineService {
             if (mode == FineCalculationMode.PROGRESSIVE) {
                 total = MoneyUtils.scaleForStorage(
                         fineCalculationService.calculateProgressive(base, dailyIncrement, overdueDays));
+            } else if (mode == FineCalculationMode.BANDED) {
+                total = MoneyUtils.scaleForStorage(PenaltyBands.amountFor(settings.getPenaltyBands(), overdueDays));
+                base = total;
             } else {
                 total = base;
+            }
+            if (settings.isPerShare() && shares > 1) {
+                total = MoneyUtils.scaleForStorage(total.multiply(BigDecimal.valueOf(shares)));
+                base = MoneyUtils.scaleForStorage(base.multiply(BigDecimal.valueOf(shares)));
             }
             if (total.compareTo(BigDecimal.ZERO) <= 0) {
                 skippedNotOverdue++;
@@ -351,7 +360,7 @@ public class FineService {
                             mode == FineCalculationMode.PROGRESSIVE
                                     ? dailyIncrement
                                     : BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
-                    .overdueDays(mode == FineCalculationMode.PROGRESSIVE ? overdueDays : 0)
+                    .overdueDays(mode == FineCalculationMode.FIXED ? 0 : overdueDays)
                     .totalAmount(total)
                     .paidAmount(BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
                     .outstandingAmount(total)
@@ -859,6 +868,88 @@ public class FineService {
                         return contributionRepository.save(row);
                     });
         }
+    }
+
+
+    /**
+     * BANDED mode: while the contribution stays unpaid and the fine untouched, the fine follows the band the days late
+     * have reached (it only ever rises). A fine already partly paid is left as it is.
+     */
+    private void raiseBandedFine(FineSettings settings, Contribution contribution, int overdueDays, int shares) {
+        if (settings.getFineMode() != FineCalculationMode.BANDED) {
+            return;
+        }
+        BigDecimal target = PenaltyBands.amountFor(settings.getPenaltyBands(), overdueDays);
+        if (settings.isPerShare()) {
+            target = target.multiply(BigDecimal.valueOf(shares));
+        }
+        BigDecimal scaled = MoneyUtils.scaleForStorage(target);
+        for (Fine fine : fineRepository.findBySourceContributionId(contribution.getId())) {
+            if (fine.getFineType() == FineType.AUTOMATIC
+                    && fine.getStatus() == FineStatus.UNPAID
+                    && fine.getPaidAmount().signum() == 0
+                    && scaled.compareTo(fine.getTotalAmount()) > 0) {
+                fine.setBaseAmount(scaled);
+                fine.setTotalAmount(scaled);
+                fine.setOutstandingAmount(scaled);
+                fine.setOverdueDays(overdueDays);
+                fineRepository.save(fine);
+            }
+        }
+    }
+
+    /**
+     * After {@code creditConversionDays} late, what is still unpaid on the contribution is charged
+     * {@code creditConversionRatePercent} for each full month since, one charge per month (never twice).
+     */
+    private int chargeCreditConversion(
+            Cooperative cooperative, FineSettings settings, Contribution contribution, LocalDate dueDate, LocalDate today,
+            UUID issuedBy, List<FineResponse> created) {
+        Integer days = settings.getCreditConversionDays();
+        BigDecimal rate = settings.getCreditConversionRatePercent();
+        BigDecimal unpaid = contribution.getOutstandingAmount();
+        if (days == null || rate == null || unpaid == null || unpaid.signum() <= 0) {
+            return 0;
+        }
+        LocalDate converted = dueDate.plusDays(days);
+        if (today.isBefore(converted)) {
+            return 0;
+        }
+        long months = java.time.temporal.ChronoUnit.MONTHS.between(converted, today) + 1;
+        int count = 0;
+        for (long k = 1; k <= months; k++) {
+            String key = "cc:" + contribution.getId() + ":" + k;
+            if (fineRepository.existsByAutomaticSourceKey(key)) {
+                continue;
+            }
+            BigDecimal charge = MoneyUtils.scaleForStorage(
+                    unpaid.multiply(rate).divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP));
+            if (charge.signum() <= 0) {
+                continue;
+            }
+            Fine fine = fineRepository.save(Fine.builder()
+                    .cooperativeId(cooperative.getId())
+                    .memberUserId(contribution.getMemberUserId())
+                    .fineType(FineType.AUTOMATIC)
+                    .calculationMode(FineCalculationMode.FIXED)
+                    .automaticSourceKey(key)
+                    .baseAmount(charge)
+                    .dailyIncrementSnapshot(BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
+                    .overdueDays(0)
+                    .totalAmount(charge)
+                    .paidAmount(BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
+                    .outstandingAmount(charge)
+                    .reason("Unpaid contribution " + contribution.getYear() + "-" + String.format("%02d", contribution.getMonth())
+                            + " converted to credit: " + rate.stripTrailingZeros().toPlainString() + "% for month " + k)
+                    .issuedDate(today)
+                    .dueDate(today)
+                    .status(FineStatus.UNPAID)
+                    .issuedBy(issuedBy)
+                    .build());
+            created.add(toResponse(fine, cooperative.getCurrency()));
+            count++;
+        }
+        return count;
     }
 
     private static String automaticSourceKey(UUID cooperativeId, UUID contributionId) {

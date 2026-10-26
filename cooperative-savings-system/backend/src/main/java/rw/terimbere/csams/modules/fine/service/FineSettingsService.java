@@ -77,6 +77,33 @@ public class FineSettingsService {
             settings.setCurrency(cooperative.getCurrency());
         }
 
+        if (request.getPenaltyBands() != null) {
+            String bands = request.getPenaltyBands().trim();
+            if (!bands.isEmpty()) {
+                PenaltyBands.parse(bands); // validates
+            }
+            settings.setPenaltyBands(bands.isEmpty() ? null : bands);
+        }
+        if (settings.getFineMode() == FineCalculationMode.BANDED && settings.getPenaltyBands() == null) {
+            throw new rw.terimbere.csams.shared.exceptions.ValidationException("Penalty bands are required for BANDED mode");
+        }
+        if (request.getPerShare() != null) {
+            settings.setPerShare(request.getPerShare());
+        }
+        if (request.getCreditConversionDays() != null || request.getCreditConversionRatePercent() != null) {
+            boolean clear = (request.getCreditConversionDays() != null && request.getCreditConversionDays() <= 0)
+                    || (request.getCreditConversionRatePercent() != null && request.getCreditConversionRatePercent().signum() <= 0);
+            if (clear) {
+                settings.setCreditConversionDays(null);
+                settings.setCreditConversionRatePercent(null);
+            } else if (request.getCreditConversionDays() == null || request.getCreditConversionRatePercent() == null) {
+                throw new rw.terimbere.csams.shared.exceptions.ValidationException(
+                        "Give both the days before conversion and the monthly rate");
+            } else {
+                settings.setCreditConversionDays(request.getCreditConversionDays());
+                settings.setCreditConversionRatePercent(request.getCreditConversionRatePercent());
+            }
+        }
         settings = fineSettingsRepository.save(settings);
 
         auditService.record(
@@ -129,6 +156,10 @@ public class FineSettingsService {
                 .baseFineAmount(MoneyUtils.scale(settings.getBaseFineAmount()))
                 .dailyIncrement(MoneyUtils.scale(settings.getDailyIncrement()))
                 .graceDays(settings.getGraceDays())
+                .penaltyBands(settings.getPenaltyBands())
+                .perShare(settings.isPerShare())
+                .creditConversionDays(settings.getCreditConversionDays())
+                .creditConversionRatePercent(settings.getCreditConversionRatePercent())
                 .currency(settings.getCurrency())
                 .createdAt(settings.getCreatedAt())
                 .updatedAt(settings.getUpdatedAt())

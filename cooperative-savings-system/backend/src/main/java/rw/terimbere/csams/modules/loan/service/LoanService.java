@@ -121,6 +121,7 @@ public class LoanService {
     private final LoanGuarantorService loanGuarantorService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final rw.terimbere.csams.modules.contribution.repository.ContributionRepository contributionRepository;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void refreshOverdueStatuses(UUID cooperativeId) {
@@ -1081,6 +1082,19 @@ public class LoanService {
         } else if (maxByShares != null) {
             effectiveMax = effectiveMax == null ? maxByShares : effectiveMax.min(maxByShares);
         }
+        if (settings.getMaxLoanPerShare() != null) {
+            // Loans are granted by shares: the limit is the amount per share times the shares the member holds, less
+            // what the member still owes on loans in progress.
+            BigDecimal perShareMax = settings.getMaxLoanPerShare().multiply(BigDecimal.valueOf(shareCount));
+            effectiveMax = effectiveMax == null ? perShareMax : effectiveMax.min(perShareMax);
+            if (maxByShares == null) {
+                maxByShares = perShareMax;
+            }
+        }
+        if (eligible && settings.isBlockWhenContributionOverdue() && hasOverdueContribution(cooperativeId, memberUserId)) {
+            eligible = false;
+            reason = "Member has a contribution past its due date; it must be paid before a new loan";
+        }
         if (eligible && requestedAmount != null && effectiveMax != null
                 && MoneyUtils.scaleForStorage(requestedAmount).compareTo(MoneyUtils.scaleForStorage(effectiveMax))
                         > 0) {
@@ -1106,6 +1120,15 @@ public class LoanService {
                 .maxLoanByShares(maxByShares == null ? null : MoneyUtils.scale(maxByShares))
                 .maxEligibleAmount(effectiveMax == null ? null : MoneyUtils.scale(effectiveMax))
                 .build();
+    }
+
+    private boolean hasOverdueContribution(UUID cooperativeId, UUID memberUserId) {
+        LocalDate today = today();
+        return contributionRepository.findByCooperativeIdAndMemberUserIdOrderByYearDescMonthDesc(cooperativeId, memberUserId).stream()
+                .anyMatch(c -> c.getStatus() != rw.terimbere.csams.modules.contribution.entity.ContributionStatus.WAIVED
+                        && c.getStatus() != rw.terimbere.csams.modules.contribution.entity.ContributionStatus.CANCELLED
+                        && c.getOutstandingAmount() != null && c.getOutstandingAmount().signum() > 0
+                        && c.getDueDate() != null && c.getDueDate().isBefore(today));
     }
 
     private static LoanGuaranteeMode resolveGuaranteeMode(LoanRequestCreateRequest request) {

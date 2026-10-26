@@ -134,6 +134,55 @@ public class RotationConfigurationService {
         return toResponse(saved);
     }
 
+    /**
+     * Migration only: records the split a running scheme already uses, effective from a month that may have begun (the
+     * cutover month), so the obligations created from the cutover carry it. Refused once any contribution of that month
+     * or later was split, so history is never re-described. Caller authorizes and holds the fund lock.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public RotationConfiguration createImported(
+            UUID cooperativeId, YearMonth effective, java.math.BigDecimal rotatingUnitAmount, UUID actorId) {
+        SchemeOperatingModel model = cooperativeRepository.findOperatingModelById(cooperativeId);
+        java.math.BigDecimal unit = cooperativeRepository.findByIdAndDeletedFalse(cooperativeId)
+                .map(rw.terimbere.csams.modules.cooperative.entity.Cooperative::getMonthlyContributionAmount)
+                .orElse(null);
+        if (unit == null || unit.signum() <= 0) {
+            throw new BusinessException("CONTRIBUTION_UNIT_MISSING", "Set the contribution per share first");
+        }
+        java.math.BigDecimal rotating = rotatingUnitAmount == null || model == SchemeOperatingModel.ROTATING ? unit : rotatingUnitAmount;
+        if (rotating.compareTo(unit) > 0 || rotating.signum() <= 0) {
+            throw new ValidationException("The rotated amount must be between 1 and the contribution per share",
+                    Map.of("rotatingUnitAmount", "At most " + unit.stripTrailingZeros().toPlainString()));
+        }
+        int bps = rotating.multiply(java.math.BigDecimal.valueOf(10000)).divide(unit, 0, java.math.RoundingMode.HALF_UP).intValue();
+        if (rotating.compareTo(unit) < 0) {
+            bps = Math.max(1, Math.min(9999, bps));
+        }
+        validateSplit(model, bps, 10000 - bps);
+        var existing = repository.findByCooperativeIdAndEffectiveYearAndEffectiveMonth(
+                cooperativeId, effective.getYear(), effective.getMonthValue());
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+        Long used = jdbc.queryForObject(
+                "select count(*) from contributions where cooperative_id = ? and rotating_bps_snapshot is not null"
+                        + " and (\"year\" * 100 + \"month\") >= ?",
+                Long.class, cooperativeId, effective.getYear() * 100 + effective.getMonthValue());
+        if (used != null && used > 0) {
+            throw new ConflictException("ROTATION_CONFIG_IN_USE", "Contributions of that month were already split");
+        }
+        return repository.saveAndFlush(RotationConfiguration.builder()
+                .cooperativeId(cooperativeId)
+                .effectiveYear(effective.getYear())
+                .effectiveMonth(effective.getMonthValue())
+                .rotatingBps(bps)
+                .retainedBps(10000 - bps)
+                .rotatingUnitAmount(rotating.compareTo(unit) == 0 ? null : rotating)
+                .createdBy(actorId)
+                .createdAt(Instant.now(clock))
+                .build());
+    }
+
     @Transactional(readOnly = true)
     public List<ConfigurationResponse> history(UUID cooperativeId) {
         access.requireRead(cooperativeId);

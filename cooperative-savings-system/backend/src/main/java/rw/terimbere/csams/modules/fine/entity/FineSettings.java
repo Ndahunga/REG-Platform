@@ -53,4 +53,20 @@ public class FineSettings extends BaseEntity {
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "RWF";
+
+    /** For BANDED mode: "1-5:2000;6-15:5000;16-30:10000" (days late after grace : amount). */
+    @Column(name = "penalty_bands", length = 500)
+    private String penaltyBands;
+
+    /** Multiply the penalty by the shares of the late contribution. */
+    @Builder.Default
+    @Column(name = "per_share", nullable = false)
+    private boolean perShare = false;
+
+    /** After this many days late, an unpaid contribution is charged {@link #creditConversionRatePercent} a month. */
+    @Column(name = "credit_conversion_days")
+    private Integer creditConversionDays;
+
+    @Column(name = "credit_conversion_rate_percent", precision = 8, scale = 4)
+    private BigDecimal creditConversionRatePercent;
 }

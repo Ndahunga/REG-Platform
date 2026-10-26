@@ -85,4 +85,13 @@ public class LoanSettings extends BaseEntity {
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "currency", nullable = false, length = 3)
     private String currency = "RWF";
+
+    /** Most a member may borrow per share held; null for no per-share limit. */
+    @Column(name = "max_loan_per_share", precision = 19, scale = 4)
+    private BigDecimal maxLoanPerShare;
+
+    /** When true, a member with a contribution past its due date cannot get a new loan. */
+    @Builder.Default
+    @Column(name = "block_when_contribution_overdue", nullable = false)
+    private boolean blockWhenContributionOverdue = false;
 }

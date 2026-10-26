@@ -67,4 +67,12 @@ public class LoanSettingsUpdateRequest {
     /** When non-null, replaces share-percentage loan levels. President-only. */
     @Valid
     private List<LoanShareTierRequest> shareTiers;
+
+    @jakarta.validation.constraints.Positive
+    private java.math.BigDecimal maxLoanPerShare;
+
+    /** Send true to remove the per-share limit. */
+    private Boolean clearMaxLoanPerShare;
+
+    private Boolean blockWhenContributionOverdue;
 }

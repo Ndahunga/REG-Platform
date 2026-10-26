@@ -453,11 +453,19 @@ public class PayoutService {
             boolean includeSpecial) {
         Map<UUID, BigDecimal> map = new HashMap<>();
         if (includeRegular) {
-            for (Object[] row :
-                    contributionRepository.sumPaidGroupedByMemberInDateRange(cooperativeId, periodFrom, periodTo)) {
-                UUID memberId = (UUID) row[0];
-                BigDecimal amount = MoneyUtils.scaleForStorage((BigDecimal) row[1]);
-                map.merge(memberId, amount, (a, b) -> MoneyUtils.scaleForStorage(a.add(b)));
+            // Only what members kept in the scheme is capital. The rotated part of a rotating or hybrid contribution
+            // was paid out to the month's recipient, so it never weighs in a share-out.
+            for (var row : contributionRepository.findPaid(cooperativeId)) {
+                if (row.getPaymentDate() == null
+                        || row.getPaymentDate().isBefore(periodFrom)
+                        || row.getPaymentDate().isAfter(periodTo)
+                        || (row.getStatus() != rw.terimbere.csams.modules.contribution.entity.ContributionStatus.PAID
+                                && row.getStatus() != rw.terimbere.csams.modules.contribution.entity.ContributionStatus.PARTIALLY_PAID)) {
+                    continue;
+                }
+                var split = rw.terimbere.csams.modules.contribution.service.ContributionService.ledgerSplit(row);
+                BigDecimal amount = MoneyUtils.scaleForStorage(split == null ? row.getPaidAmount() : split.retained());
+                map.merge(row.getMemberUserId(), amount, (a, b) -> MoneyUtils.scaleForStorage(a.add(b)));
             }
         }
         if (includeSpecial) {

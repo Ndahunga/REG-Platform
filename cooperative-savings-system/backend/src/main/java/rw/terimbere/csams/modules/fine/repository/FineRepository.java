@@ -40,6 +40,8 @@ public interface FineRepository extends JpaRepository<Fine, UUID> {
 
     boolean existsByAutomaticSourceKey(String automaticSourceKey);
 
+    List<Fine> findBySourceContributionId(UUID sourceContributionId);
+
     List<Fine> findBySourceLoanInstallmentIdAndStatusInOrderByIssuedDateAscCreatedAtAsc(
             UUID sourceLoanInstallmentId, Collection<FineStatus> statuses);
 
