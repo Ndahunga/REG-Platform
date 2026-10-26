@@ -878,6 +878,13 @@
       "errorCodes": {
         "ROTATION_CONFIG_IN_FORCE": "In force: add a newer configuration instead of changing this one.",
         "ROTATION_CONFIG_IN_USE": "Contributions were split under it: it is history. Add a newer configuration instead."
+      },
+      "rotatingAmount": "Rotated per share (RWF)",
+      "rotatingAmountHint": "Of the {{unit}} RWF paid per share each month, how much goes to the month's recipient. The rest stays as the member's capital.",
+      "retainedAmountPreview": "Kept in the scheme per share: {{amount}} RWF of {{unit}} RWF.",
+      "amountProblem": {
+        "required": "Enter the rotated amount per share",
+        "range": "Enter an amount above zero and below {{unit}} RWF"
       }
     },
     "entitlements": {
@@ -1005,6 +1012,103 @@
       "advance": "Advance received",
       "paidOutEarly": "Paid out, still contributing",
       "empty": "No rotation obligations yet."
+    },
+    "share": {
+      "new": "New share cycle",
+      "importButton": "Import running cycle",
+      "createTitle": "New share-based cycle",
+      "importTitle": "Import the cycle already running",
+      "createHelp": "Every share has one turn worth a fixed payout. A month can pay several members, and a member with several shares can be paid share by share, all at once, or grouped as your members agree.",
+      "importHelp": "Use this once, when moving a scheme that was already rotating: set the cycle as it was, record what each turn already received and what each member already paid into the rotation. Members then see who is next and what they owe or are owed.",
+      "startMonth": "First month of the cycle",
+      "startHint": "From {{month}} onward.",
+      "startHintImport": "The month the running cycle started (it may be in the past).",
+      "months": "Months in the cycle",
+      "monthsHint": "Your members hold {{shares}} shares in total.",
+      "turnMode": "How shares are paid",
+      "turnModes": {
+        "ONE_SHARE_PER_TURN": "One share per turn",
+        "ALL_SHARES_TOGETHER": "All of a member's shares together",
+        "GROUPED_BY_MONTH": "Grouped by month"
+      },
+      "turnModeHelp": {
+        "ONE_SHARE_PER_TURN": "Each share is paid in its own turn; a member with two shares is paid twice.",
+        "ALL_SHARES_TOGETHER": "A member with several shares receives all their payouts in one month.",
+        "GROUPED_BY_MONTH": "Place turns freely, several members a month, to fit the cycle into the months you chose."
+      },
+      "rotatedPerShare": "Rotated per share each month (RWF)",
+      "rotatedPerShareHint": "Part of the {{unit}} RWF contribution per share that rotates.",
+      "retainedPerShare": "Kept as capital per share: {{amount}} RWF of {{unit}} RWF.",
+      "payoutPerShare": "Payout per share (RWF)",
+      "payoutPerShareHint": "What one share's turn pays, usually the rotated amount times the months.",
+      "autoArrange": "Arrange turns",
+      "addTurn": "Add turn",
+      "removeTurn": "Remove turn",
+      "fillReceived": "Mark past turns as paid",
+      "sharesPlaced": "{{placed}} of {{total}} shares placed",
+      "month": "Month",
+      "member": "Member",
+      "shares": "Shares",
+      "payout": "Payout",
+      "received": "Already received",
+      "paid": "Paid",
+      "outstanding": "Still to pay",
+      "state": "State",
+      "states": {
+        "UPCOMING": "Upcoming",
+        "DUE": "Due",
+        "PARTLY_PAID": "Partly paid",
+        "PAID": "Paid"
+      },
+      "noTurns": "No turns yet. Use Arrange turns to place every share, then adjust.",
+      "problem": {
+        "MONTH_EMPTY": "{{month}} has no recipient",
+        "MEMBER_TWICE_IN_MONTH": "{{month}} lists the same member twice: merge the shares into one turn",
+        "TOO_MANY_SHARES": "{{name}} holds {{held}} share(s) but has {{placed}} in the cycle",
+        "NOT_ONE_SHARE": "{{month}}: in one-share-per-turn mode every turn is one share",
+        "MEMBER_SEVERAL_TURNS": "{{name}} has several turns, but shares are paid together"
+      },
+      "unplaced": "Shares not placed yet: {{list}}",
+      "funding": "Rotated contributions over the cycle: {{collections}} RWF. Turns pay: {{payouts}} RWF.",
+      "paidInTitle": "Rotated money each member paid before today",
+      "paidInHelp": "What each member had paid into this cycle's rotation before moving to the platform. Leave as is if unsure; it can be corrected with an adjustment.",
+      "fillPaidIn": "Fill as up to date ({{months}} months)",
+      "paidIn": "Paid into rotation",
+      "cashAtCutover": "Rotation money in the bank today (RWF)",
+      "cashAtCutoverHint": "Paid in, not yet paid out. It is checked against the amounts above.",
+      "create": "Create draft cycle",
+      "import": "Import cycle",
+      "imported": "Cycle imported and reconciled.",
+      "importedWithDifference": "Cycle imported. The rotation cash differs from the members' amounts by {{amount}} RWF; please review.",
+      "summary": "{{perShare}} RWF per share over {{months}} months · {{mode}}",
+      "next": "Next: {{name}} in {{month}} ({{amount}} RWF still to pay)",
+      "warning": {
+        "MEMBER_SHARES_WITHOUT_TURN": "{{name}} has {{count}} share(s) without a turn",
+        "NO_SPLIT_CONFIGURED": "No rotating split is configured for the first month",
+        "COLLECTIONS_DIFFER_FROM_PAYOUTS": "The rotated contributions over the cycle do not equal what the turns pay"
+      },
+      "reassignTitle": "Give this turn to another member",
+      "reassignHelp": "Only before the turn's month begins. The reason is recorded.",
+      "turnPayoutsTitle": "Turns to pay",
+      "poolLine": "Rotation pool available: {{available}} RWF (collected {{collected}}, paid out {{paid}}).",
+      "allTurnsPaid": "Every turn that is due has been paid.",
+      "arrearsNetted": "Unpaid contributions netted",
+      "cashToHand": "Cash to hand over",
+      "requestPayout": "Request {{amount}}",
+      "payoutRequested": "Payout requested. A different officer approves it.",
+      "nettingNote": "A payout is reduced only by the member's own unpaid contributions of months already due, never by loans or fines.",
+      "nettedLine": "Of this payout, {{netted}} settles the member's unpaid contributions; {{cash}} is handed over.",
+      "blocked": {
+        "TURN_NOT_DUE": "Not yet due",
+        "PAYOUT_ALREADY_OPEN": "Awaiting approval",
+        "PAYOUT_ALREADY_COMPLETED": "Paid",
+        "RECIPIENT_CANNOT_REQUEST_OWN": "Your own turn",
+        "RECIPIENT_NOT_ACTIVE": "Member not active",
+        "PERIOD_NOT_PAYABLE": "Cycle not active",
+        "NO_COLLECTED_FUNDS": "Pool is empty",
+        "NOT_AUTHORIZED": "Not allowed",
+        "OTHER": "Not payable now"
+      }
     }
   },
   "operatingModel": {
@@ -1650,6 +1754,14 @@
         "PAID": "Paid",
         "OVERDUE": "Overdue"
       }
+    },
+    "sharePolicy": {
+      "title": "Loans by shares",
+      "description": "Set how much a member may borrow per share held, and whether an unpaid contribution blocks a new loan.",
+      "perShare": "Maximum loan per share (RWF)",
+      "perShareHint": "e.g. 300,000: a member with 2 shares may borrow up to 600,000. Leave empty for no per-share limit.",
+      "block": "Refuse a new loan while a contribution is overdue",
+      "saved": "Loan policy saved"
     }
   },
   "fines": {
@@ -1703,7 +1815,8 @@
     },
     "calculationMode": {
       "FIXED": "Fixed",
-      "PROGRESSIVE": "Progressive"
+      "PROGRESSIVE": "Progressive",
+      "BANDED": "By days late (bands)"
     },
     "paymentStatus": {
       "PENDING": "Pending",
@@ -1788,7 +1901,21 @@
       "paid": "Paid fines",
       "awaitingReview": "Payments awaiting review"
     },
-    "openQueue": "Fine Payment Queue"
+    "openQueue": "Fine Payment Queue",
+    "policy": {
+      "title": "Late payment policy",
+      "description": "Penalties by how many days late, charged per share, and conversion of a contribution left unpaid too long into a monthly charge.",
+      "banded": "Charge by bands of days late",
+      "bands": "Bands",
+      "bandsHint": "Days late after grace : amount, e.g. 1-5:2000;6-15:5000;16-30:10000",
+      "bandsRequired": "Enter at least one band",
+      "perShare": "Charge per share (a 2-share member pays twice)",
+      "conversionDays": "Convert to credit after (days)",
+      "conversionDaysHint": "e.g. 30. Leave empty to switch off.",
+      "conversionRate": "Monthly charge (%)",
+      "conversionRateHint": "e.g. 2 means 2% a month on what is still unpaid.",
+      "saved": "Late payment policy saved"
+    }
   },
   "finePayments": {
     "emptyTitle": "No fine payments found",
@@ -4138,5 +4265,30 @@
     "resolved": "Migration review resolved.",
     "platformTitle": "Migration reviews",
     "platformExplain": "These Saving Schemes accept no further historical import until their fund authority resolves the review."
+  },
+  "positions": {
+    "title": "Members' positions",
+    "help": "Capital grows by what each member keeps in the scheme; income is shared equally per share; the rotation column is what the scheme owes the member (positive) or the interest-free advance the member is repaying (negative).",
+    "export": "Download CSV",
+    "reconciliation": "Members' capital, income and rotation add up to {{expected}} RWF; cash, loans out and investments are {{actual}} RWF (difference {{difference}}). Income to share: {{income}} RWF, {{perShare}} per share.",
+    "member": "Member",
+    "shares": "Shares",
+    "capital": "Capital",
+    "income": "Income share",
+    "rotation": "Rotation position",
+    "arrears": "Unpaid contributions",
+    "loans": "Loans owed",
+    "fines": "Fines owed",
+    "net": "Net position",
+    "total": "Total",
+    "myTitle": "My statement",
+    "openingCapital": "Capital brought in at migration",
+    "contributedCapital": "Contributions kept as capital",
+    "sharePurchases": "Shares bought",
+    "shareOutPaid": "Share-out already paid",
+    "rotatedPaid": "Paid into rotation",
+    "rotationReceived": "Rotation payouts received",
+    "advanceNote": "You received {{amount}} RWF ahead of contributing it. It is not a loan and has no interest: your remaining monthly contributions repay it.",
+    "owedNote": "The scheme still owes you {{amount}} RWF of rotation: it is paid on your turn."
   }
 }

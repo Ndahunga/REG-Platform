@@ -878,6 +878,13 @@
       "errorCodes": {
         "ROTATION_CONFIG_IN_FORCE": "Rirakora: ongeraho irishya aho kuhindura iri.",
         "ROTATION_CONFIG_IN_USE": "Imisanzu yagabanyijwe hakurikijwe ryo: ni amateka. Ongeraho irishya."
+      },
+      "rotatingAmount": "Ikizunguruka kuri buri mugabane (RWF)",
+      "rotatingAmountHint": "Muri {{unit}} RWF yishyurwa kuri buri mugabane buri kwezi, ingano ihabwa uwo ukwezi kugeraho. Ibisigaye biba igishoro cy'umunyamuryango.",
+      "retainedAmountPreview": "Ibisigara mu kimina kuri buri mugabane: {{amount}} RWF kuri {{unit}} RWF.",
+      "amountProblem": {
+        "required": "Andika ingano izunguruka kuri buri mugabane",
+        "range": "Andika ingano iri hejuru ya zeru kandi iri munsi ya {{unit}} RWF"
       }
     },
     "entitlements": {
@@ -1005,6 +1012,103 @@
       "advance": "Yahawe imbere",
       "paidOutEarly": "Yahawe, aracyatanga",
       "empty": "Nta nshingano z'uruhererekane ziraboneka."
+    },
+    "share": {
+      "new": "Uruziga rushya rw'imigabane",
+      "importButton": "Injiza uruziga rusanzwe rukora",
+      "createTitle": "Uruziga rushya rushingiye ku migabane",
+      "importTitle": "Injiza uruziga rwari rusanzwe rukora",
+      "createHelp": "Buri mugabane ugira igihe cyawo cyo guhabwa amafaranga angana. Ukwezi kumwe gushobora guhemba abanyamuryango benshi, kandi ufite imigabane myinshi ashobora guhabwa umugabane ku wundi, yose icyarimwe, cyangwa uko mwumvikanye.",
+      "importHelp": "Koresha ibi rimwe gusa, wimura ikimina cyari gisanzwe kizunguruka: shyiraho uruziga uko rwari ruri, wandike ibyo buri gihe cyamaze guhabwa n'ibyo buri munyamuryango yamaze kwishyura mu kuzunguruka. Abanyamuryango bazabona ukurikiraho n'ibyo babereyemo cyangwa babereyemo ikimina.",
+      "startMonth": "Ukwezi kwa mbere kw'uruziga",
+      "startHint": "Guhera {{month}}.",
+      "startHintImport": "Ukwezi uruziga rwatangiriyemo (gushobora kuba kwararenze).",
+      "months": "Amezi y'uruziga",
+      "monthsHint": "Abanyamuryango bafite imigabane {{shares}} yose hamwe.",
+      "turnMode": "Uko imigabane ihabwa",
+      "turnModes": {
+        "ONE_SHARE_PER_TURN": "Umugabane umwe ku gihe kimwe",
+        "ALL_SHARES_TOGETHER": "Imigabane yose y'umunyamuryango icyarimwe",
+        "GROUPED_BY_MONTH": "Bihurijwe hamwe ku kwezi"
+      },
+      "turnModeHelp": {
+        "ONE_SHARE_PER_TURN": "Buri mugabane uhabwa mu gihe cyawo; ufite imigabane ibiri ahabwa kabiri.",
+        "ALL_SHARES_TOGETHER": "Ufite imigabane myinshi ahabwa ibyayo byose mu kwezi kumwe.",
+        "GROUPED_BY_MONTH": "Shyira ibihe uko ubishaka, abanyamuryango benshi mu kwezi, kugira ngo uruziga rukwire mu mezi mwahisemo."
+      },
+      "rotatedPerShare": "Ikizunguruka kuri buri mugabane buri kwezi (RWF)",
+      "rotatedPerShareHint": "Igice cy'umusanzu wa {{unit}} RWF kuri buri mugabane kizunguruka.",
+      "retainedPerShare": "Igisigara nk'igishoro kuri buri mugabane: {{amount}} RWF kuri {{unit}} RWF.",
+      "payoutPerShare": "Amafaranga ahabwa kuri buri mugabane (RWF)",
+      "payoutPerShareHint": "Ibyo umugabane umwe uhabwa, akenshi ikizunguruka gukuba amezi.",
+      "autoArrange": "Tunganya ibihe",
+      "addTurn": "Ongeraho igihe",
+      "removeTurn": "Kuraho igihe",
+      "fillReceived": "Shyira ibihe byarenze nk'ibyishyuwe",
+      "sharesPlaced": "Imigabane {{placed}} kuri {{total}} yashyizwe",
+      "month": "Ukwezi",
+      "member": "Umunyamuryango",
+      "shares": "Imigabane",
+      "payout": "Ibihabwa",
+      "received": "Ibyamaze guhabwa",
+      "paid": "Ibyishyuwe",
+      "outstanding": "Ibisigaye kwishyurwa",
+      "state": "Uko bimeze",
+      "states": {
+        "UPCOMING": "Bizaza",
+        "DUE": "Igihe kirageze",
+        "PARTLY_PAID": "Byishyuwe igice",
+        "PAID": "Byishyuwe"
+      },
+      "noTurns": "Nta bihe birashyirwaho. Koresha Tunganya ibihe ushyireho buri mugabane, hanyuma uhindure.",
+      "problem": {
+        "MONTH_EMPTY": "{{month}} nta uhabwa",
+        "MEMBER_TWICE_IN_MONTH": "{{month}} irimo umunyamuryango kabiri: huza imigabane mu gihe kimwe",
+        "TOO_MANY_SHARES": "{{name}} afite imigabane {{held}} ariko afite {{placed}} mu ruziga",
+        "NOT_ONE_SHARE": "{{month}}: muri ubu buryo buri gihe ni umugabane umwe",
+        "MEMBER_SEVERAL_TURNS": "{{name}} afite ibihe byinshi, ariko imigabane ihabwa hamwe"
+      },
+      "unplaced": "Imigabane itarashyirwa: {{list}}",
+      "funding": "Imisanzu izunguruka mu ruziga: {{collections}} RWF. Ibihe bihabwa: {{payouts}} RWF.",
+      "paidInTitle": "Amafaranga yazungurutse buri munyamuryango yishyuye mbere y'uyu munsi",
+      "paidInHelp": "Ibyo buri munyamuryango yari yarishyuye mu kuzunguruka kw'uru ruziga mbere yo kwimukira kuri sisitemu. Ubishidikanyaho, ubireke uko biri; bishobora gukosorwa nyuma.",
+      "fillPaidIn": "Uzuza nk'uwishyuye neza (amezi {{months}})",
+      "paidIn": "Ibyishyuwe mu kuzunguruka",
+      "cashAtCutover": "Amafaranga yo kuzunguruka ari kuri konti uyu munsi (RWF)",
+      "cashAtCutoverHint": "Ayishyuwe atarahabwa abayakwiye. Agereranywa n'ibyanditswe hejuru.",
+      "create": "Kora uruziga rw'agateganyo",
+      "import": "Injiza uruziga",
+      "imported": "Uruziga rwinjijwe kandi rurahuye.",
+      "importedWithDifference": "Uruziga rwinjijwe. Amafaranga yo kuzunguruka atandukanye n'ay'abanyamuryango ho {{amount}} RWF; nimubisuzume.",
+      "summary": "{{perShare}} RWF kuri buri mugabane mu mezi {{months}} · {{mode}}",
+      "next": "Ukurikiraho: {{name}} muri {{month}} ({{amount}} RWF asigaye kwishyurwa)",
+      "warning": {
+        "MEMBER_SHARES_WITHOUT_TURN": "{{name}} afite imigabane {{count}} idafite igihe",
+        "NO_SPLIT_CONFIGURED": "Nta igabanya ry'ikizunguruka ryashyizweho ku kwezi kwa mbere",
+        "COLLECTIONS_DIFFER_FROM_PAYOUTS": "Imisanzu izunguruka mu ruziga ntingana n'ibihe bihabwa"
+      },
+      "reassignTitle": "Ha iki gihe undi munyamuryango",
+      "reassignHelp": "Mbere y'uko ukwezi kw'iki gihe gutangira gusa. Impamvu irandikwa.",
+      "turnPayoutsTitle": "Ibihe byo kwishyura",
+      "poolLine": "Amafaranga yo kuzunguruka ahari: {{available}} RWF (yakusanyijwe {{collected}}, yatanzwe {{paid}}).",
+      "allTurnsPaid": "Ibihe byose bigeze byarishyuwe.",
+      "arrearsNetted": "Imisanzu itarishyuwe ikurwamo",
+      "cashToHand": "Amafaranga atangwa mu ntoki",
+      "requestPayout": "Saba {{amount}}",
+      "payoutRequested": "Gusaba kwakozwe. Undi muyobozi ni we ubyemeza.",
+      "nettingNote": "Ibihabwa bigabanywa gusa n'imisanzu y'umunyamuryango itarishyuwe y'amezi yarenze, ntibigabanywa n'inguzanyo cyangwa ibihano.",
+      "nettedLine": "Muri ibi bihabwa, {{netted}} yishyura imisanzu itarishyuwe; {{cash}} ni yo itangwa.",
+      "blocked": {
+        "TURN_NOT_DUE": "Igihe ntikiragera",
+        "PAYOUT_ALREADY_OPEN": "Bitegereje kwemezwa",
+        "PAYOUT_ALREADY_COMPLETED": "Byishyuwe",
+        "RECIPIENT_CANNOT_REQUEST_OWN": "Ni igihe cyawe",
+        "RECIPIENT_NOT_ACTIVE": "Umunyamuryango ntakora",
+        "PERIOD_NOT_PAYABLE": "Uruziga ntirukora",
+        "NO_COLLECTED_FUNDS": "Nta mafaranga ahari",
+        "NOT_AUTHORIZED": "Ntiwemerewe",
+        "OTHER": "Ntibishoboka ubu"
+      }
     }
   },
   "operatingModel": {
@@ -1650,6 +1754,14 @@
         "PAID": "Byishyuwe",
         "OVERDUE": "Byatinze"
       }
+    },
+    "sharePolicy": {
+      "title": "Inguzanyo hakurikijwe imigabane",
+      "description": "Shyiraho ingano umunyamuryango ashobora kuguza kuri buri mugabane afite, n'uko umusanzu utishyuwe ubuza inguzanyo nshya.",
+      "perShare": "Inguzanyo ntarengwa kuri buri mugabane (RWF)",
+      "perShareHint": "urugero 300,000: ufite imigabane 2 ashobora kuguza kugeza kuri 600,000. Siga ubusa niba nta ntarengwa.",
+      "block": "Wanga inguzanyo nshya mu gihe umusanzu urenze igihe",
+      "saved": "Amabwiriza y'inguzanyo yabitswe"
     }
   },
   "fines": {
@@ -1703,7 +1815,8 @@
     },
     "calculationMode": {
       "FIXED": "Fixed",
-      "PROGRESSIVE": "Progressive"
+      "PROGRESSIVE": "Progressive",
+      "BANDED": "Hakurikijwe iminsi yarenze (ibyiciro)"
     },
     "paymentStatus": {
       "PENDING": "Bitegereje",
@@ -1788,7 +1901,21 @@
       "paid": "Amahane yishyuwe",
       "awaitingReview": "Ubwishyu butegereje isuzuma"
     },
-    "openQueue": "Urutonde rw'ubwishyu bw'amahane"
+    "openQueue": "Urutonde rw'ubwishyu bw'amahane",
+    "policy": {
+      "title": "Amabwiriza yo kwishyura bitinze",
+      "description": "Ibihano hakurikijwe iminsi yarenze, bibarwa kuri buri mugabane, n'uguhindura umusanzu utishyuwe igihe kirekire mo inyungu ya buri kwezi.",
+      "banded": "Hana hakurikijwe ibyiciro by'iminsi yarenze",
+      "bands": "Ibyiciro",
+      "bandsHint": "Iminsi yarenze nyuma y'imbabazi : ingano, urugero 1-5:2000;6-15:5000;16-30:10000",
+      "bandsRequired": "Andika nibura icyiciro kimwe",
+      "perShare": "Hana kuri buri mugabane (ufite imigabane 2 yishyura kabiri)",
+      "conversionDays": "Hindura inguzanyo nyuma y'iminsi",
+      "conversionDaysHint": "urugero 30. Siga ubusa niba bidakoreshwa.",
+      "conversionRate": "Inyungu ya buri kwezi (%)",
+      "conversionRateHint": "urugero 2 bivuze 2% buri kwezi ku bitarishyuwe.",
+      "saved": "Amabwiriza yo kwishyura bitinze yabitswe"
+    }
   },
   "finePayments": {
     "emptyTitle": "Nta kwishyura amahane kubonetse",
@@ -4138,5 +4265,30 @@
     "resolved": "Isuzuma ry'iyinjizwa ry'amateka ryakemuwe.",
     "platformTitle": "Isuzuma ry'iyinjizwa ry'amateka",
     "platformExplain": "Ibi bimina ntibyemera kwinjiza amateka ndetse kugeza ushinzwe amafaranga akemuye isuzuma."
+  },
+  "positions": {
+    "title": "Uko abanyamuryango bahagaze",
+    "help": "Igishoro kiyongera ku byo buri munyamuryango asiga mu kimina; inyungu igabanywa kimwe kuri buri mugabane; inkingi yo kuzunguruka yerekana ibyo ikimina kimubereyemo (byiza) cyangwa avansi itagira inyungu ari kwishyura (bibi).",
+    "export": "Kuramo CSV",
+    "reconciliation": "Igishoro, inyungu n'ukuzunguruka by'abanyamuryango bingana na {{expected}} RWF; amafaranga ahari, inguzanyo zatanzwe n'ishoramari ni {{actual}} RWF (itandukaniro {{difference}}). Inyungu yo kugabana: {{income}} RWF, {{perShare}} kuri buri mugabane.",
+    "member": "Umunyamuryango",
+    "shares": "Imigabane",
+    "capital": "Igishoro",
+    "income": "Umugabane w'inyungu",
+    "rotation": "Uko ahagaze mu kuzunguruka",
+    "arrears": "Imisanzu itarishyuwe",
+    "loans": "Inguzanyo abereyemo",
+    "fines": "Ibihano abereyemo",
+    "net": "Uko ahagaze muri rusange",
+    "total": "Igiteranyo",
+    "myTitle": "Raporo yanjye",
+    "openingCapital": "Igishoro cyinjijwe mu kwimuka",
+    "contributedCapital": "Imisanzu yabaye igishoro",
+    "sharePurchases": "Imigabane yaguzwe",
+    "shareOutPaid": "Igabana ryamaze kwishyurwa",
+    "rotatedPaid": "Ibyishyuwe mu kuzunguruka",
+    "rotationReceived": "Ibyahawe mu kuzunguruka",
+    "advanceNote": "Wahawe {{amount}} RWF mbere yo kuyatanga. Si inguzanyo kandi nta nyungu: imisanzu yawe isigaye ni yo iyishyura.",
+    "owedNote": "Ikimina kikubereyemo {{amount}} RWF yo kuzunguruka: uzayahabwa ku gihe cyawe."
   }
 }

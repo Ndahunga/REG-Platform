@@ -68,6 +68,9 @@ export interface RotationPayout {
   disbursementNote?: string | null
   /** What the signed-in user may do with this payout now, decided by the backend. */
   actions?: PayoutActions
+  rotationTurnId?: string | null
+  arrearsNetted?: number | string
+  cashAmount?: number | string
 }
 
 /** The backend's answer to "may I approve, confirm or cancel this payout?", with a stable reason code when not. */

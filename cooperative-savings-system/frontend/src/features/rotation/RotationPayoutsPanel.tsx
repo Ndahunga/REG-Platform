@@ -36,6 +36,7 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import { PAYMENT_METHODS, type PaymentMethod } from '@/shared/types/memberPayment'
 import type { RotationPayout, RotationPayoutStatus } from '@/shared/types/rotationPayout'
 import { formatMoney } from '@/shared/utils/formatMoney'
+import { TurnPayoutsSection } from './TurnPayoutsSection'
 
 interface RotationPayoutsPanelProps {
   cooperativeId: string
@@ -102,6 +103,7 @@ export function RotationPayoutsPanel({ cooperativeId, staff }: RotationPayoutsPa
   return (
     <Stack spacing={2} data-testid="rotation-payouts">
       <Alert severity="info">{t('rotation.payouts.explain')}</Alert>
+      {staff ? <TurnPayoutsSection cooperativeId={cooperativeId} /> : null}
       {payouts.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {staff ? t('rotation.payouts.emptyStaff') : t('rotation.payouts.emptyMine')}
@@ -128,6 +130,11 @@ export function RotationPayoutsPanel({ cooperativeId, staff }: RotationPayoutsPa
                   available: formatMoney(p.availableAtRequest),
                 })}
               </Typography>
+              {Number(p.arrearsNetted ?? 0) > 0 ? (
+                <Typography variant="body2" color="text.secondary" data-testid="rotation-payout-netted">
+                  {t('rotation.share.nettedLine', { netted: formatMoney(p.arrearsNetted ?? 0), cash: formatMoney(p.cashAmount ?? 0) })}
+                </Typography>
+              ) : null}
               {p.partial ? (
                 <Typography variant="body2" color="text.secondary" data-testid="rotation-payout-shortfall">
                   {t('rotation.payouts.shortfall', { remaining: formatMoney(p.remainingAfterPayout) })}

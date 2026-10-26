@@ -5,6 +5,9 @@ import { deleteRotationConfiguration, fetchRotationConfigurations } from '@/shar
 import { renderWithApp } from '@/test/paymentTestHarness'
 import { RotationConfigPanel } from './RotationConfigPanel'
 
+vi.mock('@/shared/api/cooperatives', () => ({
+  fetchCooperative: vi.fn().mockResolvedValue({ id: 'c1', monthlyContributionAmount: 70000 }),
+}))
 vi.mock('@/shared/api/rotation', () => ({
   fetchRotationConfigurations: vi.fn(),
   createRotationConfiguration: vi.fn(),

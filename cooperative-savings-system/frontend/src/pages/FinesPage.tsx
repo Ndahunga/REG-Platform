@@ -1,3 +1,4 @@
+import { FinePolicyCard } from '@/features/fines/FinePolicyCard'
 import {
   Alert,
   Box,
@@ -163,7 +164,10 @@ export function FinesPage() {
       ) : null}
 
       {active === 'settings' ? (
-        <FineSettingsPanel cooperativeId={cooperativeId} />
+        <>
+          <FineSettingsPanel cooperativeId={cooperativeId} />
+          <FinePolicyCard cooperativeId={cooperativeId} />
+        </>
       ) : null}
     </Box>
   )

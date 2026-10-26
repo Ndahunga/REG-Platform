@@ -1,3 +1,4 @@
+import { LoanSharePolicyCard } from '@/features/loans/LoanSharePolicyCard'
 import { Box, Grid, Tab, Tabs } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
@@ -204,7 +205,10 @@ export function LoansPage() {
       ) : null}
 
       {active === 'settings' ? (
-        <LoanSettingsPanel cooperativeId={cooperativeId} />
+        <>
+          <LoanSettingsPanel cooperativeId={cooperativeId} />
+          <LoanSharePolicyCard cooperativeId={cooperativeId} />
+        </>
       ) : null}
     </Box>
   )

@@ -88,6 +88,8 @@ export interface LoanSettings {
   allocationOrder?: LoanRepaymentComponent[] | string[]
   currency?: string
   shareTiers?: LoanShareTier[]
+  maxLoanPerShare?: string | number | null
+  blockWhenContributionOverdue?: boolean
   version?: number
   createdAt?: string
   updatedAt?: string
@@ -109,6 +111,9 @@ export interface LoanSettingsUpdateRequest {
   gracePeriodDays?: number
   allocationOrder?: LoanRepaymentComponent[]
   shareTiers?: LoanShareTier[]
+  maxLoanPerShare?: number
+  clearMaxLoanPerShare?: boolean
+  blockWhenContributionOverdue?: boolean
 }
 
 export interface LoanApplicationForm {

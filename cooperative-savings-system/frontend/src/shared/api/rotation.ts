@@ -8,6 +8,11 @@ import type {
   RotationCycleCreateRequest,
   RotationPeriod,
   RotationRecipientChange,
+  RotationImportRequest,
+  RotationImportResponse,
+  ShareCycleCreateRequest,
+  SharePool,
+  TurnPayoutEligibility,
 } from '@/shared/types/rotation'
 
 const base = (cooperativeId: string) => `/cooperatives/${cooperativeId}/rotation`
@@ -90,4 +95,62 @@ export async function fetchRotationRecipientChanges(
     `${base(cooperativeId)}/periods/${periodId}/recipient-changes`,
   )
   return unwrapApiData(response.data) ?? []
+}
+
+export async function createShareCycle(
+  cooperativeId: string,
+  payload: ShareCycleCreateRequest,
+  idempotencyKey?: string,
+): Promise<RotationCycle> {
+  const response = await apiClient.post<ApiResponse<RotationCycle>>(`${base(cooperativeId)}/share-cycles`, payload, {
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
+  })
+  return unwrapApiData(response.data)
+}
+
+export async function reassignRotationTurn(
+  cooperativeId: string,
+  turnId: string,
+  memberUserId: string,
+  reason: string,
+): Promise<RotationCycle> {
+  const response = await apiClient.put<ApiResponse<RotationCycle>>(`${base(cooperativeId)}/turns/${turnId}/member`, {
+    memberUserId,
+    reason,
+  })
+  return unwrapApiData(response.data)
+}
+
+export async function fetchTurnEligibility(cooperativeId: string): Promise<TurnPayoutEligibility[]> {
+  const response = await apiClient.get<ApiResponse<TurnPayoutEligibility[]>>(
+    `${base(cooperativeId)}/payouts/turn-eligibility`,
+  )
+  return unwrapApiData(response.data) ?? []
+}
+
+export async function requestTurnPayout(
+  cooperativeId: string,
+  turnId: string,
+  amount: number | undefined,
+  idempotencyKey: string,
+): Promise<unknown> {
+  const response = await apiClient.post<ApiResponse<unknown>>(
+    `${base(cooperativeId)}/payouts`,
+    { rotationTurnId: turnId, amount },
+    { headers: { 'Idempotency-Key': idempotencyKey } },
+  )
+  return unwrapApiData(response.data)
+}
+
+export async function fetchSharePool(cooperativeId: string): Promise<SharePool> {
+  const response = await apiClient.get<ApiResponse<SharePool>>(`${base(cooperativeId)}/pool/share`)
+  return unwrapApiData(response.data)
+}
+
+export async function importRotation(
+  cooperativeId: string,
+  payload: RotationImportRequest,
+): Promise<RotationImportResponse> {
+  const response = await apiClient.post<ApiResponse<RotationImportResponse>>(`${base(cooperativeId)}/migration`, payload)
+  return unwrapApiData(response.data)
 }

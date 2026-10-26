@@ -27,12 +27,17 @@ import {
   cancelRotationCycle,
   changeRotationRecipient,
   createRotationCycle,
+  createShareCycle,
   fetchRotationCycles,
+  importRotation,
+  reassignRotationTurn,
   fetchRotationRecipientChanges,
 } from '@/shared/api/rotation'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { LoadingState } from '@/shared/components/LoadingState'
-import type { RotationCycle, RotationCycleStatus, RotationPeriod } from '@/shared/types/rotation'
+import type { RotationCycle, RotationCycleStatus, RotationPeriod, RotationTurn } from '@/shared/types/rotation'
+import { ShareCycleDialog } from './ShareCycleDialog'
+import { money } from './shareCycle'
 import { CycleCreateDialog } from './CycleCreateDialog'
 import { ReasonDialog, type RecipientOption } from './ReasonDialog'
 import { memberLabel, monthKey } from './rotationHelpers'
@@ -40,6 +45,20 @@ import { memberLabel, monthKey } from './rotationHelpers'
 interface RotationSchedulePanelProps {
   cooperativeId: string
   canManage: boolean
+  model?: 'ROTATING' | 'HYBRID'
+}
+
+function turnColor(state: RotationTurn['state']): 'default' | 'success' | 'warning' | 'info' {
+  switch (state) {
+    case 'PAID':
+      return 'success'
+    case 'PARTLY_PAID':
+      return 'warning'
+    case 'DUE':
+      return 'info'
+    default:
+      return 'default'
+  }
 }
 
 function statusColor(status: RotationCycleStatus): 'default' | 'success' | 'warning' | 'error' {
@@ -59,7 +78,7 @@ function statusColor(status: RotationCycleStatus): 'default' | 'success' | 'warn
  * The monthly rotation schedule: one scheduled recipient per month, in the order set when the cycle was created.
  * Every active member can read it; only administrators see the actions. Nothing here moves money.
  */
-export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSchedulePanelProps) {
+export function RotationSchedulePanel({ cooperativeId, canManage, model = 'HYBRID' }: RotationSchedulePanelProps) {
   const { t } = useTranslation()
   const { enqueueSnackbar } = useSnackbar()
   const queryClient = useQueryClient()
@@ -67,6 +86,8 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
   const [cancelTarget, setCancelTarget] = useState<RotationCycle | null>(null)
   const [reassignTarget, setReassignTarget] = useState<{ cycle: RotationCycle; period: RotationPeriod } | null>(null)
   const [historyTarget, setHistoryTarget] = useState<RotationPeriod | null>(null)
+  const [shareOpen, setShareOpen] = useState<'create' | 'import' | null>(null)
+  const [turnTarget, setTurnTarget] = useState<RotationTurn | null>(null)
 
   const cyclesQuery = useQuery({
     queryKey: ['rotation', cooperativeId, 'cycles'],
@@ -75,7 +96,7 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
   const membersQuery = useQuery({
     queryKey: ['rotation', cooperativeId, 'members'],
     queryFn: () => fetchMembers(cooperativeId, { size: 500 }),
-    enabled: canManage && reassignTarget !== null,
+    enabled: canManage && (reassignTarget !== null || turnTarget !== null),
   })
   const historyQuery = useQuery({
     queryKey: ['rotation', cooperativeId, 'history', historyTarget?.id],
@@ -126,6 +147,49 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
     onError,
   })
 
+  const shareMutation = useMutation({
+    mutationFn: (args: { payload: Parameters<typeof createShareCycle>[1]; key: string }) =>
+      createShareCycle(cooperativeId, args.payload, args.key),
+    onSuccess: () => {
+      enqueueSnackbar(t('rotation.cycle.created'), { variant: 'success' })
+      setShareOpen(null)
+      void refresh()
+    },
+    onError,
+  })
+  const importMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof importRotation>[1]) => importRotation(cooperativeId, payload),
+    onSuccess: (result) => {
+      const diff = Number(result.difference ?? 0)
+      enqueueSnackbar(
+        diff === 0
+          ? t('rotation.share.imported')
+          : t('rotation.share.importedWithDifference', { amount: money(diff) }),
+        { variant: diff === 0 ? 'success' : 'warning' },
+      )
+      setShareOpen(null)
+      void refresh()
+    },
+    onError,
+  })
+  const turnMutation = useMutation({
+    mutationFn: (args: { turnId: string; memberUserId: string; reason: string }) =>
+      reassignRotationTurn(cooperativeId, args.turnId, args.memberUserId, args.reason),
+    onSuccess: () => {
+      enqueueSnackbar(t('rotation.recipient.changed'), { variant: 'success' })
+      setTurnTarget(null)
+      void refresh()
+    },
+    onError,
+  })
+  const turnOptions: RecipientOption[] = useMemo(
+    () =>
+      (membersQuery.data?.content ?? [])
+        .filter((m) => m.membershipStatus === 'ACTIVE' && m.userId !== turnTarget?.memberUserId)
+        .map((m) => ({ userId: m.userId, label: memberLabel(m) })),
+    [membersQuery.data, turnTarget],
+  )
+
   const reassignOptions: RecipientOption[] = useMemo(() => {
     if (!reassignTarget) return []
     const taken = new Set(reassignTarget.cycle.periods.map((p) => p.recipientUserId))
@@ -139,11 +203,15 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
   return (
     <Stack spacing={2.5}>
       {canManage ? (
-        <Box>
-          <Button variant="contained" onClick={() => setCreateOpen(true)}>
-            {t('rotation.cycle.new')}
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+          <Button variant="contained" onClick={() => setShareOpen('create')}>
+            {t('rotation.share.new')}
           </Button>
-        </Box>
+          <Button variant="outlined" onClick={() => setShareOpen('import')}>
+            {t('rotation.share.importButton')}
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>{t('rotation.cycle.new')}</Button>
+        </Stack>
       ) : null}
 
       {cyclesQuery.isLoading ? <LoadingState /> : null}
@@ -173,6 +241,13 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
                 {t('rotation.cycle.cancelReasonShown', { reason: cycle.cancelReason })}
               </Alert>
             ) : null}
+            {cycle.payoutMode === 'FIXED_PER_SHARE' ? (
+              <ShareTurns
+                cycle={cycle}
+                canReassign={canManage && editable}
+                onReassign={(turn) => setTurnTarget(turn)}
+              />
+            ) : (
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
@@ -209,6 +284,7 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
                 </TableBody>
               </Table>
             </Box>
+            )}
             {canManage && editable ? (
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                 {cycle.status === 'DRAFT' ? (
@@ -238,6 +314,28 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
         loading={createMutation.isPending}
         onClose={() => setCreateOpen(false)}
         onSubmit={(payload, key) => createMutation.mutate({ payload, key })}
+      />
+      <ShareCycleDialog
+        open={shareOpen !== null}
+        cooperativeId={cooperativeId}
+        mode={shareOpen ?? 'create'}
+        model={model}
+        loading={shareMutation.isPending || importMutation.isPending}
+        onClose={() => setShareOpen(null)}
+        onCreate={(payload, key) => shareMutation.mutate({ payload, key })}
+        onImport={(payload) => importMutation.mutate(payload)}
+      />
+      <ReasonDialog
+        open={turnTarget !== null}
+        title={t('rotation.share.reassignTitle')}
+        description={t('rotation.share.reassignHelp')}
+        submitLabel={t('rotation.recipient.changeConfirm')}
+        loading={turnMutation.isPending}
+        recipientOptions={turnOptions}
+        onClose={() => setTurnTarget(null)}
+        onSubmit={(reason, memberUserId) =>
+          turnTarget && memberUserId && turnMutation.mutate({ turnId: turnTarget.id, memberUserId, reason })
+        }
       />
       <ReasonDialog
         open={cancelTarget !== null}
@@ -288,6 +386,88 @@ export function RotationSchedulePanel({ cooperativeId, canManage }: RotationSche
           <Button onClick={() => setHistoryTarget(null)}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
+    </Stack>
+  )
+}
+
+/** The turns of a share-based cycle: who is paid in which month, how much, and what is still to pay. */
+function ShareTurns({
+  cycle,
+  canReassign,
+  onReassign,
+}: {
+  cycle: RotationCycle
+  canReassign: boolean
+  onReassign: (turn: RotationTurn) => void
+}) {
+  const { t } = useTranslation()
+  const turns = cycle.turns ?? []
+  const check = cycle.fundingCheck
+  const next = turns.find((turn) => turn.state !== 'PAID')
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="body2" color="text.secondary">
+        {t('rotation.share.summary', {
+          perShare: money(cycle.payoutPerShare),
+          months: cycle.periodCount,
+          mode: cycle.turnMode ? t(`rotation.share.turnModes.${cycle.turnMode}`) : '',
+        })}
+      </Typography>
+      {next ? (
+        <Alert severity="info" data-testid="share-next">
+          {t('rotation.share.next', {
+            name: next.memberName ?? '',
+            month: monthKey(next.year, next.month),
+            amount: money(next.outstanding),
+          })}
+        </Alert>
+      ) : null}
+      {check && check.warnings.length > 0 ? (
+        <Alert severity="warning">
+          {check.warnings.map((w) => {
+            const [code, name, count] = w.split(':')
+            return <div key={w}>{t(`rotation.share.warning.${code}`, { name, count })}</div>
+          })}
+        </Alert>
+      ) : null}
+      <Box sx={{ overflowX: 'auto' }}>
+        <Table size="small" data-testid="share-turn-table">
+          <TableHead>
+            <TableRow>
+              <TableCell>{t('rotation.share.month')}</TableCell>
+              <TableCell>{t('rotation.share.member')}</TableCell>
+              <TableCell>{t('rotation.share.shares')}</TableCell>
+              <TableCell align="right">{t('rotation.share.payout')}</TableCell>
+              <TableCell align="right">{t('rotation.share.paid')}</TableCell>
+              <TableCell align="right">{t('rotation.share.outstanding')}</TableCell>
+              <TableCell>{t('rotation.share.state')}</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {turns.map((turn) => (
+              <TableRow key={turn.id}>
+                <TableCell>{monthKey(turn.year, turn.month)}</TableCell>
+                <TableCell>{turn.memberName}</TableCell>
+                <TableCell>{turn.shares}</TableCell>
+                <TableCell align="right">{money(turn.payoutAmount)}</TableCell>
+                <TableCell align="right">{money(Number(turn.paidOut) + Number(turn.openingReceived))}</TableCell>
+                <TableCell align="right">{money(turn.outstanding)}</TableCell>
+                <TableCell>
+                  <Chip size="small" color={turnColor(turn.state)} label={t(`rotation.share.states.${turn.state}`)} />
+                </TableCell>
+                <TableCell align="right">
+                  {canReassign && turn.state === 'UPCOMING' ? (
+                    <Button size="small" onClick={() => onReassign(turn)}>
+                      {t('rotation.recipient.change')}
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Box>
     </Stack>
   )
 }

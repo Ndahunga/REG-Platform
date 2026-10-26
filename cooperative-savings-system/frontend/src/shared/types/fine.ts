@@ -2,7 +2,7 @@ export type FineStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'WAIVED' | 'CANC
 
 export type FineType = 'AUTOMATIC' | 'MANUAL'
 
-export type FineCalculationMode = 'FIXED' | 'PROGRESSIVE'
+export type FineCalculationMode = 'FIXED' | 'PROGRESSIVE' | 'BANDED'
 
 export type FinePaymentStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
@@ -17,6 +17,8 @@ export const FINE_STATUSES: FineStatus[] = [
 export const FINE_TYPES: FineType[] = ['AUTOMATIC', 'MANUAL']
 
 export const FINE_CALCULATION_MODES: FineCalculationMode[] = ['FIXED', 'PROGRESSIVE']
+/** Automatic fines can also follow bands of days late. */
+export const FINE_SETTINGS_MODES: FineCalculationMode[] = ['FIXED', 'PROGRESSIVE', 'BANDED']
 
 export const FINE_PAYMENT_STATUSES: FinePaymentStatus[] = ['PENDING', 'APPROVED', 'REJECTED']
 
@@ -29,6 +31,10 @@ export interface FineSettings {
   dailyIncrement: string | number
   graceDays: number
   currency?: string
+  penaltyBands?: string | null
+  perShare?: boolean
+  creditConversionDays?: number | null
+  creditConversionRatePercent?: string | number | null
   createdAt?: string
   updatedAt?: string
 }
@@ -40,6 +46,10 @@ export interface FineSettingsUpdateRequest {
   dailyIncrement: string | number
   graceDays: number
   currency?: string
+  penaltyBands?: string
+  perShare?: boolean
+  creditConversionDays?: number
+  creditConversionRatePercent?: number
 }
 
 export interface Fine {

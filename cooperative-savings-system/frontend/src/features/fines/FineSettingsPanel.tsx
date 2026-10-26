@@ -24,7 +24,7 @@ import { fetchFineSettings, updateFineSettings } from '@/shared/api/fineSettings
 import { ErrorState } from '@/shared/components/ErrorState'
 import { LoadingState } from '@/shared/components/LoadingState'
 import { ROUTES } from '@/shared/constants/routes'
-import { FINE_CALCULATION_MODES } from '@/shared/types/fine'
+import { FINE_SETTINGS_MODES } from '@/shared/types/fine'
 import {
   fineSettingsDefaults,
   fineSettingsSchema,
@@ -69,7 +69,7 @@ export function FineSettingsPanel({ cooperativeId }: FineSettingsPanelProps) {
     if (!query.data) return
     reset({
       autoFinesEnabled: Boolean(query.data.autoFinesEnabled),
-      fineMode: (query.data.fineMode as 'FIXED' | 'PROGRESSIVE') || 'FIXED',
+      fineMode: (query.data.fineMode as 'FIXED' | 'PROGRESSIVE' | 'BANDED') || 'FIXED',
       baseFineAmount: String(query.data.baseFineAmount ?? '0'),
       dailyIncrement: String(query.data.dailyIncrement ?? '0'),
       graceDays: String(query.data.graceDays ?? 0),
@@ -171,7 +171,7 @@ export function FineSettingsPanel({ cooperativeId }: FineSettingsPanelProps) {
           {...register('fineMode')}
           fullWidth
         >
-          {FINE_CALCULATION_MODES.map((mode) => (
+          {FINE_SETTINGS_MODES.map((mode) => (
             <MenuItem key={mode} value={mode}>
               {t(`fines.calculationMode.${mode}`)}
             </MenuItem>

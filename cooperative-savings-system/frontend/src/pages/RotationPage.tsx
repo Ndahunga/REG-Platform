@@ -103,7 +103,7 @@ export function RotationPage() {
         <Tab label={t('rotation.tabs.obligations')} />
         {payoutStaff ? <Tab label={t('rotation.tabs.pool')} /> : null}
       </Tabs>
-      {tab === 0 ? <RotationSchedulePanel cooperativeId={cooperativeId} canManage={canManage} /> : null}
+      {tab === 0 ? <RotationSchedulePanel cooperativeId={cooperativeId} canManage={canManage} model={model} /> : null}
       {tab === 1 ? <RotationConfigPanel cooperativeId={cooperativeId} model={model} canManage={canManage} /> : null}
       {tab === 2 ? <RotationEntitlementsPanel cooperativeId={cooperativeId} staff={payoutStaff} /> : null}
       {tab === 3 ? <RotationPayoutsPanel cooperativeId={cooperativeId} staff={payoutStaff} /> : null}

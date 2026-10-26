@@ -37,6 +37,12 @@ vi.mock('@/shared/api/rotation', () => ({
   cancelRotationCycle: vi.fn(),
   changeRotationRecipient: vi.fn(),
   fetchRotationRecipientChanges: vi.fn(),
+  createShareCycle: vi.fn(),
+  importRotation: vi.fn(),
+  reassignRotationTurn: vi.fn(),
+  fetchTurnEligibility: vi.fn().mockResolvedValue([]),
+  fetchSharePool: vi.fn(),
+  requestTurnPayout: vi.fn(),
 }))
 
 const cooperativeMock = vi.mocked(fetchCooperative)
@@ -319,34 +325,34 @@ describe('RotationPage', { timeout: 20_000 }, () => {
 
   // ---------------------------------------------------------------- configuration
 
-  it('saves a Hybrid configuration in basis points and shows the retained share', async () => {
+  it('saves a Hybrid configuration as a rotated amount per share and shows what is retained', async () => {
+    cooperativeMock.mockResolvedValue({ ...baseScheme, operatingModel: 'HYBRID', monthlyContributionAmount: 70000 })
     createConfigMock.mockResolvedValue({
       id: 'k',
       effectiveYear: 2030,
       effectiveMonth: 1,
-      rotatingBps: 7000,
-      retainedBps: 3000,
+      rotatingBps: 7143,
+      retainedBps: 2857,
+      rotatingUnitAmount: 50000,
     })
     const user = userEvent.setup()
     renderPage(PRESIDENT_USER)
     await user.click(await screen.findByRole('tab', { name: 'Configuration' }))
     expect(await screen.findByText('New configuration')).toBeInTheDocument()
 
-    // invalid splits are refused client-side
-    for (const bad of ['', '0', '100', 'abc']) {
-      fireEvent.change(screen.getByLabelText(/^Rotating share/), { target: { value: bad } })
+    // invalid amounts are refused client-side
+    for (const bad of ['', '0', '70000', 'abc']) {
+      fireEvent.change(screen.getByLabelText(/^Rotated per share/), { target: { value: bad } })
       await user.click(screen.getByRole('button', { name: 'Save configuration' }))
     }
     expect(createConfigMock).not.toHaveBeenCalled()
 
-    fireEvent.change(screen.getByLabelText(/^Rotating share/), { target: { value: '70' } })
-    expect(screen.getByTestId('retained-preview')).toHaveTextContent('Retained share: 30%')
+    fireEvent.change(screen.getByLabelText(/^Rotated per share/), { target: { value: '50000' } })
+    expect(screen.getByTestId('retained-preview')).toHaveTextContent('20,000')
     await user.click(screen.getByRole('button', { name: 'Save configuration' }))
     await waitFor(() => expect(createConfigMock).toHaveBeenCalledTimes(1))
     const [, payload] = createConfigMock.mock.calls[0]
-    expect(payload.rotatingBps).toBe(7000)
-    expect(payload.retainedBps).toBe(3000)
-    expect(payload.rotatingBps + payload.retainedBps).toBe(10000)
+    expect(payload.rotatingUnitAmount).toBe(50000)
   })
 
   it('stores 100% rotating for a Rotating scheme without asking for a percentage', async () => {
@@ -356,7 +362,7 @@ describe('RotationPage', { timeout: 20_000 }, () => {
     renderPage(PRESIDENT_USER)
     await user.click(await screen.findByRole('tab', { name: 'Configuration' }))
     expect(await screen.findByText(/distributes 100% of contributions/)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/^Rotating share/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Rotated per share/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Save configuration' }))
     await waitFor(() => expect(createConfigMock).toHaveBeenCalledTimes(1))

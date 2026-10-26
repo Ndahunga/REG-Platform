@@ -20,6 +20,11 @@ import { backendError, renderWithApp, type TestUser } from '@/test/paymentTestHa
 import { RotationEntitlementsPanel } from './RotationEntitlementsPanel'
 import { RotationPayoutsPanel } from './RotationPayoutsPanel'
 
+vi.mock('@/shared/api/rotation', () => ({
+  fetchTurnEligibility: vi.fn().mockResolvedValue([]),
+  fetchSharePool: vi.fn(),
+  requestTurnPayout: vi.fn(),
+}))
 vi.mock('@/shared/api/rotationPayouts', () => ({
   fetchEntitlements: vi.fn(),
   fetchMyEntitlements: vi.fn(),

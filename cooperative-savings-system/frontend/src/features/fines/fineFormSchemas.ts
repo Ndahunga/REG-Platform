@@ -206,7 +206,7 @@ export const fineSettingsDefaults: FineSettingsFormValues = {
 
 export const fineSettingsSchema: yup.ObjectSchema<FineSettingsFormValues> = yup.object({
   autoFinesEnabled: yup.boolean().required(),
-  fineMode: yup.mixed<FineCalculationMode>().oneOf(['FIXED', 'PROGRESSIVE']).required(),
+  fineMode: yup.mixed<FineCalculationMode>().oneOf(['FIXED', 'PROGRESSIVE', 'BANDED']).required(),
   baseFineAmount: yup
     .string()
     .trim()

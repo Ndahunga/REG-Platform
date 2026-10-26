@@ -5,19 +5,15 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getErrorMessage } from '@/shared/api/client'
 import { createRotationConfiguration, deleteRotationConfiguration, fetchRotationConfigurations } from '@/shared/api/rotation'
+import { fetchCooperative } from '@/shared/api/cooperatives'
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog'
 import { localizedApiError } from '@/shared/utils/localizedApiError'
 import type { RotationConfiguration } from '@/shared/types/rotation'
 import { LoadingState } from '@/shared/components/LoadingState'
 import type { SchemeOperatingModel } from '@/shared/types/cooperative'
-import {
-  bpsToPercent,
-  firstSelectableMonth,
-  monthKey,
-  parseMonthInput,
-  resolveRotatingBps,
-  type SplitProblem,
-} from './rotationHelpers'
+import { bpsToPercent, firstSelectableMonth, monthKey, parseMonthInput } from './rotationHelpers'
+
+type SplitProblem = 'required' | 'range'
 
 interface RotationConfigPanelProps {
   cooperativeId: string
@@ -35,7 +31,7 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
   const queryClient = useQueryClient()
   const minMonth = firstSelectableMonth()
   const [month, setMonth] = useState(minMonth)
-  const [rotatingPercent, setRotatingPercent] = useState('')
+  const [rotatingAmount, setRotatingAmount] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<RotationConfiguration | null>(null)
 
@@ -44,14 +40,20 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
     queryFn: () => fetchRotationConfigurations(cooperativeId),
   })
 
+  const schemeQuery = useQuery({
+    queryKey: ['cooperatives', cooperativeId],
+    queryFn: () => fetchCooperative(cooperativeId),
+  })
+  const unit = Number(schemeQuery.data?.monthlyContributionAmount ?? 0)
+
   const mutation = useMutation({
-    mutationFn: (payload: { year: number; month: number; rotatingBps: number }) =>
-      createRotationConfiguration(cooperativeId, {
-        effectiveYear: payload.year,
-        effectiveMonth: payload.month,
-        rotatingBps: payload.rotatingBps,
-        retainedBps: 10000 - payload.rotatingBps,
-      }),
+    mutationFn: (payload: { year: number; month: number; rotatingAmount: number | null }) =>
+      createRotationConfiguration(
+        cooperativeId,
+        payload.rotatingAmount === null
+          ? { effectiveYear: payload.year, effectiveMonth: payload.month, rotatingBps: 10000, retainedBps: 0 }
+          : { effectiveYear: payload.year, effectiveMonth: payload.month, rotatingUnitAmount: payload.rotatingAmount },
+      ),
     onSuccess: () => {
       enqueueSnackbar(t('rotation.config.saved'), { variant: 'success' })
       setSubmitted(false)
@@ -75,14 +77,22 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
 
   const parsedMonth = parseMonthInput(month)
   const monthProblem = !parsedMonth ? 'required' : month < minMonth ? 'future' : null
-  const split = resolveRotatingBps(model, rotatingPercent)
-  const splitProblem: SplitProblem | null = 'problem' in split ? split.problem : null
-  const rotatingBps = 'bps' in split ? split.bps : null
+  // Hybrid: the officers state, in RWF per share, how much of each contribution rotates; the rest is kept as capital.
+  const amount = Number(rotatingAmount.replace(/[,\s]/g, ''))
+  const splitProblem: SplitProblem | null =
+    model === 'ROTATING'
+      ? null
+      : !rotatingAmount.trim() || !Number.isFinite(amount)
+        ? 'required'
+        : amount <= 0 || (unit > 0 && amount >= unit)
+          ? 'range'
+          : null
+  const retainedAmount = splitProblem || model === 'ROTATING' ? null : unit - amount
 
   const submit = () => {
     setSubmitted(true)
-    if (monthProblem || splitProblem || !parsedMonth || rotatingBps === null) return
-    mutation.mutate({ year: parsedMonth.year, month: parsedMonth.month, rotatingBps })
+    if (monthProblem || splitProblem || !parsedMonth) return
+    mutation.mutate({ year: parsedMonth.year, month: parsedMonth.month, rotatingAmount: model === 'ROTATING' ? null : amount })
   }
 
   const rows = query.data ?? []
@@ -116,22 +126,25 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
             ) : (
               <>
                 <TextField
-                  label={t('rotation.config.rotatingPercent')}
+                  label={t('rotation.config.rotatingAmount')}
                   required
-                  value={rotatingPercent}
-                  onChange={(e) => setRotatingPercent(e.target.value)}
+                  value={rotatingAmount}
+                  onChange={(e) => setRotatingAmount(e.target.value)}
                   error={submitted && Boolean(splitProblem)}
                   helperText={
                     submitted && splitProblem
-                      ? t(`rotation.config.problem.${splitProblem}`)
-                      : t('rotation.config.rotatingPercentHint')
+                      ? t(`rotation.config.amountProblem.${splitProblem}`, { unit: unit.toLocaleString() })
+                      : t('rotation.config.rotatingAmountHint', { unit: unit.toLocaleString() })
                   }
-                  slotProps={{ htmlInput: { inputMode: 'decimal' } }}
+                  slotProps={{ htmlInput: { inputMode: 'numeric' } }}
                 />
                 <Typography variant="body2" color="text.secondary" data-testid="retained-preview">
-                  {rotatingBps === null
+                  {retainedAmount === null
                     ? t('rotation.config.retainedPending')
-                    : t('rotation.config.retainedPreview', { percent: bpsToPercent(10000 - rotatingBps) })}
+                    : t('rotation.config.retainedAmountPreview', {
+                        amount: retainedAmount.toLocaleString(),
+                        unit: unit.toLocaleString(),
+                      })}
                 </Typography>
               </>
             )}
@@ -161,10 +174,16 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
             >
               <Typography sx={{ fontWeight: 600 }}>{monthKey(row.effectiveYear, row.effectiveMonth)}</Typography>
               <Typography variant="body2">
-                {t('rotation.config.rotatingLabel')}: {bpsToPercent(row.rotatingBps)}%
+                {t('rotation.config.rotatingLabel')}:{' '}
+                {row.rotatingUnitAmount != null
+                  ? `${Number(row.rotatingUnitAmount).toLocaleString()} RWF`
+                  : `${bpsToPercent(row.rotatingBps)}%`}
               </Typography>
               <Typography variant="body2">
-                {t('rotation.config.retainedLabel')}: {bpsToPercent(row.retainedBps)}%
+                {t('rotation.config.retainedLabel')}:{' '}
+                {row.rotatingUnitAmount != null && unit > 0
+                  ? `${(unit - Number(row.rotatingUnitAmount)).toLocaleString()} RWF`
+                  : `${bpsToPercent(row.retainedBps)}%`}
               </Typography>
               {canManage && row.canDelete ? (
                 <Button

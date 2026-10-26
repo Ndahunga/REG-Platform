@@ -2,6 +2,7 @@ import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useAppSelector } from '@/app/store/hooks'
+import { MemberPositionsPanel } from '@/features/positions/MemberPositionsPanel'
 import { ReportsExportPanel } from '@/features/reports'
 import { EmptyState } from '@/shared/components/EmptyState'
 import { PageHeader } from '@/shared/components/PageHeader'
@@ -33,6 +34,7 @@ export function ReportsPage() {
         title={t('pages.reports.title')}
         description={t('pages.reports.description')}
       />
+      <MemberPositionsPanel cooperativeId={cooperativeId} />
       <ReportsExportPanel cooperativeId={cooperativeId} initialReportType={initialReportType} />
     </Box>
   )
