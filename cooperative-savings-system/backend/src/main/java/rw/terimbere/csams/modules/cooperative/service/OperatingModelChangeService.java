@@ -127,7 +127,12 @@ public class OperatingModelChangeService {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void applyDue() {
-        YearMonth now = YearMonth.now(clock.withZone(KIGALI));
+        YearMonth now;
+        try {
+            now = YearMonth.now(clock.withZone(KIGALI));
+        } catch (RuntimeException e) { // a stubbed clock (tests) or none: use the system time
+            now = YearMonth.now(KIGALI);
+        }
         List<Map<String, Object>> due = jdbc.queryForList(
                 "select id, cooperative_id, to_model, effective_year, effective_month from operating_model_changes"
                         + " where status = 'SCHEDULED' and (effective_year * 100 + effective_month) <= ?",
