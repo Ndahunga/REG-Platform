@@ -288,13 +288,13 @@ def seed_comrades(admin, data):
     spec = {"name": data["name"], "reg": data.get("reg", "COMRADES"), "unit": data["unit"], "model": "HYBRID",
             "registered": data.get("registered", "2024-12-01"),
             "president": {"username": pres_m["username"], "first": first, "last": last or first,
-                          "email": pres_m.get("email")}}
+                          "email": pres_m.get("email") or f"{pres_m['username']}@comrades.staging"}}
     coop = create_scheme(admin, spec)
     pres = login(pres_m["username"], DEMO_PASSWORD)
     for m in data["members"]:
         if m.get("officer"):
             f, _, l = m["name"].partition(" ")
-            register(coop, pres, m["username"], f, l or f, m["officer"], m.get("email"))
+            register(coop, pres, m["username"], f, l or f, m["officer"], m.get("email") or f"{m['username']}@comrades.staging")
     import_workbook(coop, pres, "template", member_rows(data["members"], "comrades.staging"), data["cutover"], data.get("openingFunds"))
     if data.get("loans"):
         try:
