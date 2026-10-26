@@ -1,0 +1,17 @@
+name: Staging check
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Smoke-test the staging site (no credentials)
+        run: |
+          set -e
+          B=https://ouwealth-staging.onrender.com
+          home=$(curl -s --max-time 300 "$B/rotation" | grep -o '<title>[^<]*</title>' || true)
+          health=$(curl -s --max-time 120 "$B/actuator/health")
+          bad=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' -d '{"username":"nobody","password":"wrong-password"}' "$B/api/v1/auth/login")
+          asset=$(curl -s --max-time 60 "$B/" | grep -o 'assets/[^"]*\.js' | head -1)
+          js=$(curl -s -o /dev/null -w '%{http_code}' "$B/$asset")
+          echo "::notice title=Staging::page $home | health $health | bad login $bad | bundle $asset $js"
