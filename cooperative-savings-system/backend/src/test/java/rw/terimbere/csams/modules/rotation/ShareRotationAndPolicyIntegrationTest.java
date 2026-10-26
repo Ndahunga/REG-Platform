@@ -52,7 +52,7 @@ class ShareRotationAndPolicyIntegrationTest {
     void aTurnIsPaidFromThePoolAndNettedByTheRecipientsOverdueContribution() throws Exception {
         PaymentScenario p = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "HYBRID", 2);
         Actor b = p.addMember(3);
-        YearMonth start = NOW.minusMonths(1);
+        YearMonth start = NOW.minusMonths(2);
         MvcResult imported = mockMvc.perform(post(p.base() + "/rotation/migration")
                         .header("Authorization", "Bearer " + p.fixtures.superAdminToken())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -60,21 +60,20 @@ class ShareRotationAndPolicyIntegrationTest {
                                 "cutoverYear", NOW.getYear(), "cutoverMonth", NOW.getMonthValue(),
                                 "rotatingUnitAmount", 700,
                                 "cycle", Map.of(
-                                        "startYear", start.getYear(), "startMonth", start.getMonthValue(), "months", 2,
+                                        "startYear", start.getYear(), "startMonth", start.getMonthValue(), "months", 3,
                                         "payoutPerShare", 1000, "turnMode", "GROUPED_BY_MONTH",
                                         "turns", List.of(
                                                 Map.of("monthIndex", 1, "memberUserId", p.payer.id(), "shares", 2),
-                                                Map.of("monthIndex", 2, "memberUserId", b.id(), "shares", 3))),
+                                                Map.of("monthIndex", 2, "memberUserId", b.id(), "shares", 1),
+                                                Map.of("monthIndex", 3, "memberUserId", b.id(), "shares", 2))),
                                 "members", List.of()))))
                 .andReturn();
         assertThat(status(imported)).as(imported.getResponse().getContentAsString()).isEqualTo(200);
 
         // B pays the current month: 3 x 700 = 2,100 rotates into the pool.
         p.postedFor(b, "3000", contribution(NOW, "3000"));
-        // The payer still owes last month's contribution, past its due date.
+        // The payer still owes the contribution of two months ago (recorded late, no due date: the 10th of the next month).
         p.row(start);
-        jdbc.update("update contributions set due_date = ? where cooperative_id = ? and member_user_id = ? and \"year\" = ? and \"month\" = ?",
-                LocalDate.now(PaymentScenario.KIGALI).minusDays(5), p.id(), p.payer.id(), start.getYear(), start.getMonthValue());
 
         UUID turn = jdbc.queryForObject("select id from rotation_turns where cooperative_id = ? and member_user_id = ?",
                 UUID.class, p.id(), p.payer.id());
