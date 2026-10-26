@@ -116,6 +116,14 @@ def import_workbook(coop, token, template_path, sheets, cutover, funds=None):
     return imp
 
 
+PHONE = [788100000]
+
+
+def next_phone():
+    PHONE[0] += 1
+    return f"250{PHONE[0]}"
+
+
 def member_rows(members, email_domain):
     reg = []
     cap = []
@@ -124,7 +132,7 @@ def member_rows(members, email_domain):
             "Full Name": m["name"],
             "Username": m["username"],
             "Email": m.get("email") or f"{m['username']}@{email_domain}",
-            "Phone Number": m.get("phone"),
+            "Phone Number": m.get("phone") or next_phone(),
             "Total Contributions to Date (RWF)": m.get("contributions", 0),
         })
         cap.append({
