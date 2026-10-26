@@ -78,6 +78,7 @@ jobs:
           POSTGRES_PASSWORD: csams
           APP_SEED_DEFAULT_ADMIN: "true"
           SEED_STRICT: "1"
+          SEED_DELAY_SECONDS: "3"
         run: |
           pip install openpyxl >/dev/null
           java -jar cooperative-savings-system/backend/target/csams-backend-*.jar > app.log 2>&1 &

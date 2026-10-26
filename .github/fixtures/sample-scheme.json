@@ -93,7 +93,7 @@
   "loans": [
     {
       "Username": "sample.three",
-      "Repayment Type": "Flat",
+      "Repayment Type": "END_OF_TERM",
       "Loan Amount (RWF)": 100000,
       "Interest Rate (%)": 2,
       "Loan Issued Date": "2026-08-01",

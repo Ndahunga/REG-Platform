@@ -29,6 +29,6 @@ ENV SPRING_PROFILES_ACTIVE=staging \
     SPRING_WEB_RESOURCES_STATIC_LOCATIONS=file:/app/web/ \
     APP_SEED_DEFAULT_ADMIN=true \
     FILE_STORAGE_BASE_PATH=/app/uploads \
-    JAVA_TOOL_OPTIONS="-Djava.awt.headless=true -Xss512k -XX:+UseSerialGC -XX:MaxRAM=400m -XX:MaxRAMPercentage=70 -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1"
+    JAVA_TOOL_OPTIONS="-Djava.awt.headless=true -Xss512k -XX:+UseSerialGC -XX:MaxRAM=420m -XX:MaxRAMPercentage=45 -XX:MaxMetaspaceSize=170m -XX:CICompilerCount=2 -XX:ReservedCodeCacheSize=48m -XX:TieredStopAtLevel=1"
 EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]

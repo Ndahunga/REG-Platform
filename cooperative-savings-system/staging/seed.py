@@ -301,6 +301,8 @@ def seed_comrades(admin, data):
             import_workbook(coop, pres, "loan-template", {"Loan Registration": data["loans"]}, data["cutover"])
         except ApiError as e:
             log("loans import skipped:", e)
+            if os.environ.get("SEED_STRICT"):
+                raise
     ids = members_by_username(coop, pres)
     sy, sm = (int(x) for x in data["start"].split("-"))
     plan = {}
@@ -320,7 +322,7 @@ def seed_comrades(admin, data):
 
 def main():
     wait_for_api()
-    time.sleep(5)
+    time.sleep(int(os.environ.get("SEED_DELAY_SECONDS", "45")))
     try:
         admin = login(ADMIN_USER, ADMIN_DEFAULT)
     except ApiError:
