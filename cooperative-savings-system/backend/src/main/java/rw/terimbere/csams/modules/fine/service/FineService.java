@@ -75,6 +75,8 @@ import rw.terimbere.csams.shared.utilities.MoneyUtils;
 @RequiredArgsConstructor
 public class FineService {
 
+    private final CreditConversionService creditConversionService;
+
     private static final Logger log = LoggerFactory.getLogger(FineService.class);
 
     private final FineRepository fineRepository;
@@ -899,57 +901,13 @@ public class FineService {
     }
 
     /**
-     * After {@code creditConversionDays} late, what is still unpaid on the contribution is charged
-     * {@code creditConversionRatePercent} for each full month since, one charge per month (never twice).
+     * After {@code creditConversionDays} late, what is still unpaid on the contribution becomes a loan at the monthly
+     * rate (see {@link CreditConversionService}); the contribution then counts as paid by that credit.
      */
     private int chargeCreditConversion(
             Cooperative cooperative, FineSettings settings, Contribution contribution, LocalDate dueDate, LocalDate today,
             UUID issuedBy, List<FineResponse> created) {
-        Integer days = settings.getCreditConversionDays();
-        BigDecimal rate = settings.getCreditConversionRatePercent();
-        BigDecimal unpaid = contribution.getOutstandingAmount();
-        if (days == null || rate == null || unpaid == null || unpaid.signum() <= 0) {
-            return 0;
-        }
-        LocalDate converted = dueDate.plusDays(days);
-        if (today.isBefore(converted)) {
-            return 0;
-        }
-        long months = java.time.temporal.ChronoUnit.MONTHS.between(converted, today) + 1;
-        int count = 0;
-        for (long k = 1; k <= months; k++) {
-            String key = "cc:" + contribution.getId() + ":" + k;
-            if (fineRepository.existsByAutomaticSourceKey(key)) {
-                continue;
-            }
-            BigDecimal charge = MoneyUtils.scaleForStorage(
-                    unpaid.multiply(rate).divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP));
-            if (charge.signum() <= 0) {
-                continue;
-            }
-            Fine fine = fineRepository.save(Fine.builder()
-                    .cooperativeId(cooperative.getId())
-                    .memberUserId(contribution.getMemberUserId())
-                    .fineType(FineType.AUTOMATIC)
-                    .calculationMode(FineCalculationMode.FIXED)
-                    .automaticSourceKey(key)
-                    .baseAmount(charge)
-                    .dailyIncrementSnapshot(BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
-                    .overdueDays(0)
-                    .totalAmount(charge)
-                    .paidAmount(BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE))
-                    .outstandingAmount(charge)
-                    .reason("Unpaid contribution " + contribution.getYear() + "-" + String.format("%02d", contribution.getMonth())
-                            + " converted to credit: " + rate.stripTrailingZeros().toPlainString() + "% for month " + k)
-                    .issuedDate(today)
-                    .dueDate(today)
-                    .status(FineStatus.UNPAID)
-                    .issuedBy(issuedBy)
-                    .build());
-            created.add(toResponse(fine, cooperative.getCurrency()));
-            count++;
-        }
-        return count;
+        return creditConversionService.convertIfDue(cooperative, settings, contribution.getId(), dueDate, today, issuedBy);
     }
 
     private static String automaticSourceKey(UUID cooperativeId, UUID contributionId) {

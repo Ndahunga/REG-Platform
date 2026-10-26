@@ -93,6 +93,43 @@ def filled_workbook(template_bytes, sheets):
     return out.getvalue()
 
 
+def opening_workbook(template_bytes, data, sy, sm):
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(template_bytes))
+    ws = wb["Scheme"]
+    values = {
+        "Cycle first month (YYYY-MM)": f"{sy:04d}-{sm:02d}",
+        "Months in the cycle": data["months"],
+        "Payout per share (RWF)": data["payoutPerShare"],
+        "Rotated per share each month (RWF)": data.get("rotated"),
+        "How shares are paid (ONE_SHARE_PER_TURN, ALL_SHARES_TOGETHER or GROUPED_BY_MONTH)": data.get("turnMode", "GROUPED_BY_MONTH"),
+        "Rotation money held at the cutover (RWF)": data.get("cash"),
+        "Income earned before the cutover not yet shared (RWF)": data.get("unsharedIncome", 0),
+    }
+    for row in ws.iter_rows(min_row=2):
+        if row[0].value in values and values[row[0].value] is not None:
+            ws.cell(row=row[0].row, column=2, value=values[row[0].value])
+    turns = wb["Turns"]
+    r = 2
+    for m in data["members"]:
+        for t in m.get("turns", []):
+            y, mo = month_add(sy, sm, t["month"] - 1)
+            turns.cell(row=r, column=1, value=m["username"])
+            turns.cell(row=r, column=2, value=f"{y:04d}-{mo:02d}")
+            turns.cell(row=r, column=3, value=t["shares"])
+            turns.cell(row=r, column=4, value=t.get("received", 0))
+            r += 1
+    mem = wb["Members"]
+    for i, m in enumerate(data["members"], start=2):
+        mem.cell(row=i, column=1, value=m["username"])
+        mem.cell(row=i, column=2, value=m.get("rotatedPaid", 0))
+        mem.cell(row=i, column=3, value=m.get("owed", 0))
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
 def multipart(file_bytes, filename):
     boundary = "----seed" + uuid.uuid4().hex
     body = (
@@ -303,20 +340,16 @@ def seed_comrades(admin, data):
             log("loans import skipped:", e)
             if os.environ.get("SEED_STRICT"):
                 raise
-    ids = members_by_username(coop, pres)
+    # Third migration workbook: the running rotation and the positions the first two workbooks cannot carry.
     sy, sm = (int(x) for x in data["start"].split("-"))
-    plan = {}
-    for m in data["members"]:
-        for t in m.get("turns", []):
-            key = (t["month"], m["username"])
-            plan[key] = (t["month"], m["username"], t["shares"], t.get("received", 0))
-    result = call("POST", f"/api/v1/cooperatives/{coop}/rotation/migration", pres, body={
-        "cutoverYear": TODAY.year, "cutoverMonth": TODAY.month, "rotatingUnitAmount": data["rotated"],
-        "cycle": {"startYear": sy, "startMonth": sm, "months": data["months"], "payoutPerShare": data["payoutPerShare"],
-                  "turnMode": "GROUPED_BY_MONTH", "turns": turns_from_plan(sorted(plan.values()), ids)},
-        "members": [{"memberUserId": ids[m["username"]], "rotatedPaid": m.get("rotatedPaid", 0)} for m in data["members"]],
-        "rotationCashAtCutover": data.get("cash")})
-    log("comrades rotation import:", json.dumps({k: result.get(k) for k in ("expectedRotationCash", "declaredRotationCash", "difference", "warnings")}))
+    template = call("GET", f"/api/v1/cooperatives/{coop}/positions/opening-workbook/template", pres, accept_bytes=True)
+    payload = opening_workbook(template, data, sy, sm)
+    body, ctype = multipart(payload, "rotation-and-positions.xlsx")
+    result = call("POST", f"/api/v1/cooperatives/{coop}/positions/opening-workbook", pres, raw=body, content_type=ctype)
+    rot = result.get("rotation") or {}
+    log("comrades opening workbook:", json.dumps({"members": result.get("membersUpdated"), "owed": result.get("totalOwedToMembers"),
+        "income": result.get("unallocatedIncome"), "rotationCash": rot.get("expectedRotationCash"), "difference": rot.get("difference"),
+        "warnings": result.get("warnings")}))
     return coop
 
 

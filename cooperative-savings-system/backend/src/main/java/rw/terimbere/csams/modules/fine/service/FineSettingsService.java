@@ -96,12 +96,14 @@ public class FineSettingsService {
             if (clear) {
                 settings.setCreditConversionDays(null);
                 settings.setCreditConversionRatePercent(null);
+                settings.setCreditConversionTermMonths(null);
             } else if (request.getCreditConversionDays() == null || request.getCreditConversionRatePercent() == null) {
                 throw new rw.terimbere.csams.shared.exceptions.ValidationException(
                         "Give both the days before conversion and the monthly rate");
             } else {
                 settings.setCreditConversionDays(request.getCreditConversionDays());
                 settings.setCreditConversionRatePercent(request.getCreditConversionRatePercent());
+                settings.setCreditConversionTermMonths(request.getCreditConversionTermMonths());
             }
         }
         settings = fineSettingsRepository.save(settings);
@@ -160,6 +162,7 @@ public class FineSettingsService {
                 .perShare(settings.isPerShare())
                 .creditConversionDays(settings.getCreditConversionDays())
                 .creditConversionRatePercent(settings.getCreditConversionRatePercent())
+                .creditConversionTermMonths(settings.getCreditConversionTermMonths())
                 .currency(settings.getCurrency())
                 .createdAt(settings.getCreatedAt())
                 .updatedAt(settings.getUpdatedAt())

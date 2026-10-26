@@ -40,5 +40,6 @@ public class FineSettingsUpdateRequest {
     private String penaltyBands;
     private Boolean perShare;
     private Integer creditConversionDays;
+    private Integer creditConversionTermMonths;
     private BigDecimal creditConversionRatePercent;
 }

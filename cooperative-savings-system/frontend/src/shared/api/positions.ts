@@ -20,6 +20,7 @@ export interface MemberPosition {
   contributionArrears: number | string
   loansOutstanding: number | string
   finesOutstanding: number | string
+  owedToMember: number | string
   unclassifiedPaid: number | string
   netPosition: number | string
 }
@@ -34,6 +35,7 @@ export interface SchemePosition {
   totalRotationPosition: number | string
   totalLoansOutstanding: number | string
   totalFinesOutstanding: number | string
+  totalOwedToMembers?: number | string
   availableFunds: number | string
   expectedAssets: number | string
   actualAssets: number | string
@@ -61,4 +63,39 @@ export async function downloadPositionsCsv(cooperativeId: string): Promise<void>
   link.download = 'member-positions.csv'
   link.click()
   URL.revokeObjectURL(url)
+}
+
+export interface OpeningWorkbookResult {
+  membersUpdated: number
+  totalOwedToMembers: number | string
+  unallocatedIncome: number | string
+  rotationImported: boolean
+  rotation?: {
+    totalRotatedPaid: number | string
+    totalReceived: number | string
+    expectedRotationCash: number | string
+    declaredRotationCash?: number | string | null
+    difference?: number | string | null
+    warnings: string[]
+  } | null
+  warnings: string[]
+}
+
+export async function downloadOpeningWorkbookTemplate(cooperativeId: string): Promise<void> {
+  const response = await apiClient.get<Blob>(`${base(cooperativeId)}/opening-workbook/template`, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'ikimina-rotation-and-positions-template.xlsx'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+export async function importOpeningWorkbook(cooperativeId: string, file: File): Promise<OpeningWorkbookResult> {
+  const form = new FormData()
+  form.append('file', file)
+  const response = await apiClient.post<ApiResponse<OpeningWorkbookResult>>(`${base(cooperativeId)}/opening-workbook`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return unwrapApiData(response.data)
 }

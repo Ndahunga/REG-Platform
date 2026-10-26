@@ -44,7 +44,8 @@
           "shares": 1,
           "received": 300000
         }
-      ]
+      ],
+      "owed": 70000
     },
     {
       "name": "Uma User",
@@ -101,5 +102,6 @@
       "Amount Paid to Date (RWF)": 0,
       "Outstanding Principal (RWF)": 100000
     }
-  ]
+  ],
+  "unsharedIncome": 25000
 }

@@ -35,6 +35,7 @@ import { ErrorState } from '@/shared/components/ErrorState'
 import { LoadingState } from '@/shared/components/LoadingState'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { HistoricalTransactionsPanel } from '@/features/historicalTransactions/HistoricalTransactionsPanel'
+import { OpeningWorkbookPanel } from '@/features/historicalTransactions/OpeningWorkbookPanel'
 import { ResponsiveTable, type TableColumn } from '@/shared/components/ResponsiveTable'
 import { importStatusColor } from '@/features/reports/reportHelpers'
 import {
@@ -624,22 +625,25 @@ function SectionCard({ title, lines }: { title: string; lines: Array<[string, st
 export function HistoricalImportPage() {
   const { t } = useTranslation()
   const cooperativeId = useAppSelector((s) => s.auth.selectedCooperativeId)
-  const [tab, setTab] = useState<'opening' | 'transactions'>('opening')
+  const [tab, setTab] = useState<'opening' | 'rotation' | 'transactions'>('opening')
   return (
     <Box>
       <Tabs
         value={tab}
-        onChange={(_, value: 'opening' | 'transactions') => setTab(value)}
+        onChange={(_, value: 'opening' | 'rotation' | 'transactions') => setTab(value)}
         variant="scrollable"
         scrollButtons="auto"
         aria-label={t('historicalTransactions.tabsLabel')}
         sx={{ mb: 2 }}
       >
         <Tab value="opening" label={t('historicalTransactions.tabs.opening')} />
+        <Tab value="rotation" label={t('historicalTransactions.tabs.rotation')} />
         <Tab value="transactions" label={t('historicalTransactions.tabs.transactions')} />
       </Tabs>
       {tab === 'opening' ? (
         <OpeningBalanceImport />
+      ) : tab === 'rotation' ? (
+        cooperativeId ? <OpeningWorkbookPanel cooperativeId={cooperativeId} /> : <Alert severity="info">{t('payments.selectSchemeTitle')}</Alert>
       ) : cooperativeId ? (
         <Box>
           <PageHeader title={t('historicalTransactions.title')} description={t('historicalTransactions.description')} />

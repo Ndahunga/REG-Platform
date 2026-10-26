@@ -35,6 +35,7 @@ export interface FineSettings {
   perShare?: boolean
   creditConversionDays?: number | null
   creditConversionRatePercent?: string | number | null
+  creditConversionTermMonths?: number | null
   createdAt?: string
   updatedAt?: string
 }
@@ -50,6 +51,7 @@ export interface FineSettingsUpdateRequest {
   perShare?: boolean
   creditConversionDays?: number
   creditConversionRatePercent?: number
+  creditConversionTermMonths?: number
 }
 
 export interface Fine {

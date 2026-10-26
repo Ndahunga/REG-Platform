@@ -87,9 +87,11 @@ public class MemberPositionService {
             BigDecimal contributionArrears,
             BigDecimal loansOutstanding,
             BigDecimal finesOutstanding,
+            /** Money the scheme owed the member at the migration cutover (a liability to the member). */
+            BigDecimal owedToMember,
             /** Paid money whose rotating/retained split was never recorded (hybrid history): shown, not guessed. */
             BigDecimal unclassifiedPaid,
-            /** Capital + income + rotation position - loans - fines. */
+            /** Capital + income + rotation position + owed to member - loans - fines. */
             BigDecimal netPosition) {}
 
     public record SchemePosition(
@@ -102,6 +104,7 @@ public class MemberPositionService {
             BigDecimal totalRotationPosition,
             BigDecimal totalLoansOutstanding,
             BigDecimal totalFinesOutstanding,
+            BigDecimal totalOwedToMembers,
             BigDecimal availableFunds,
             /** What members' capital, income and rotation positions say the scheme should hold in cash and loans. */
             BigDecimal expectedAssets,
@@ -206,6 +209,7 @@ public class MemberPositionService {
         BigDecimal totalLoans = BigDecimal.ZERO;
         BigDecimal totalFines = BigDecimal.ZERO;
         BigDecimal totalUnclassified = BigDecimal.ZERO;
+        BigDecimal totalOwed = BigDecimal.ZERO;
         for (UUID id : memberIds) {
             MemberOpeningBalance o = opening.get(id);
             int s = shares.getOrDefault(id, 0);
@@ -224,12 +228,14 @@ public class MemberPositionService {
             BigDecimal loan = loans.getOrDefault(id, BigDecimal.ZERO);
             BigDecimal fine = fines.getOrDefault(id, BigDecimal.ZERO);
             BigDecimal unc = unclassified.getOrDefault(id, BigDecimal.ZERO);
-            BigDecimal net = capital.add(income).add(rotation).subtract(loan).subtract(fine);
+            BigDecimal owed = o == null ? BigDecimal.ZERO : o.getOpeningOwedToMember();
+            BigDecimal net = capital.add(income).add(rotation).add(owed).subtract(loan).subtract(fine);
             members.add(new MemberPosition(
                     id, names.getOrDefault(id, ""), s,
                     m(openingCapital), m(contributed), m(bought), m(paidOut), m(capital), m(income),
                     m(openRotPaid), m(rotPaid), m(openRotReceived), m(rotReceived), m(rotation),
-                    m(arrears.getOrDefault(id, BigDecimal.ZERO)), m(loan), m(fine), m(unc), m(net)));
+                    m(arrears.getOrDefault(id, BigDecimal.ZERO)), m(loan), m(fine), m(owed), m(unc), m(net)));
+            totalOwed = totalOwed.add(owed);
             totalCapital = totalCapital.add(capital);
             totalRotation = totalRotation.add(rotation);
             totalLoans = totalLoans.add(loan);
@@ -245,7 +251,7 @@ public class MemberPositionService {
         BigDecimal investments = m(financialService.sumActiveInvestmentCapital(cooperativeId));
         BigDecimal actual = available.add(loanPrincipalOut).add(investments);
         // Rotation positions already net the advances, so their sum is the rotated money still held.
-        BigDecimal expected = totalCapital.add(incomePool).add(totalRotation).add(totalUnclassified);
+        BigDecimal expected = totalCapital.add(incomePool).add(totalRotation).add(totalUnclassified).add(totalOwed);
         return new SchemePosition(
                 cooperativeId,
                 cooperative.getOperatingModel() == null ? null : cooperative.getOperatingModel().name(),
@@ -256,6 +262,7 @@ public class MemberPositionService {
                 m(totalRotation),
                 m(totalLoans),
                 m(totalFines),
+                m(totalOwed),
                 available,
                 m(expected),
                 actual,
@@ -269,7 +276,9 @@ public class MemberPositionService {
         BigDecimal fines = financialService.sumApprovedCreditsByType(cooperativeId, LedgerTransactionType.FINE_PAYMENT);
         BigDecimal other = financialService.sumApprovedCreditsByType(cooperativeId, LedgerTransactionType.OTHER_INCOME);
         BigDecimal expenses = financialService.sumApprovedDebitsByType(cooperativeId, LedgerTransactionType.GENERAL_EXPENSE);
-        return interest.add(fines).add(other).subtract(expenses);
+        BigDecimal opening = scalar(
+                "select coalesce(sum(unallocated_income),0) from scheme_opening_positions where cooperative_id = ?", cooperativeId);
+        return interest.add(fines).add(other).subtract(expenses).add(opening);
     }
 
     private Map<UUID, BigDecimal> byMember(String sql, UUID cooperativeId) {

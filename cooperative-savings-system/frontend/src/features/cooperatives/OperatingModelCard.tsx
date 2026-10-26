@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { classifyCooperativeOperatingModel, fetchCooperative } from '@/shared/api/cooperatives'
 import { getErrorMessage } from '@/shared/api/client'
 import type { SchemeOperatingModel } from '@/shared/types/cooperative'
+import { ModelChangeSection } from './ModelChangeSection'
 import { OperatingModelClassifyDialog } from './OperatingModelClassifyDialog'
 
 interface OperatingModelCardProps {
@@ -57,6 +58,7 @@ export function OperatingModelCard({ cooperativeId, canManage }: OperatingModelC
             <Typography variant="body2" color="text.secondary">
               {t(`operatingModel.options.${model}.description`)}
             </Typography>
+            <ModelChangeSection cooperativeId={cooperativeId} current={model} canManage={canManage} />
           </Box>
         ) : (
           <Alert

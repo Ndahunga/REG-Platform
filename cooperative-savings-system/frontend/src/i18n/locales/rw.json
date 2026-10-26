@@ -1138,6 +1138,17 @@
       "confirmRequired": "Emeza ko wabisobanukiwe mbere yo kubika",
       "submit": "Bika uburyo bwo gukora",
       "success": "Uburyo bwo gukora bwabitswe"
+    },
+    "change": {
+      "title": "Hindura uburyo ikimina gikora",
+      "help": "Amabwiriza y'ikimina arahinduka. Impinduka itangira ku kwezi kutaratangira; amezi yatangiye agumana uburyo bwayo. Niba ikimina gitangiye kuzunguruka, shyiraho igabanya ry'amezi mashya.",
+      "newModel": "Uburyo bushya",
+      "from": "Guhera ukwezi",
+      "reason": "Impamvu (si ngombwa)",
+      "submit": "Teganya impinduka",
+      "scheduled": "Impinduka yateganyijwe",
+      "pending": "Kizahinduka {{model}} guhera {{month}}.",
+      "cancel": "Hagarika impinduka"
     }
   },
   "cooperatives": {
@@ -1913,8 +1924,10 @@
       "conversionDays": "Hindura inguzanyo nyuma y'iminsi",
       "conversionDaysHint": "urugero 30. Siga ubusa niba bidakoreshwa.",
       "conversionRate": "Inyungu ya buri kwezi (%)",
-      "conversionRateHint": "urugero 2 bivuze 2% buri kwezi ku bitarishyuwe.",
-      "saved": "Amabwiriza yo kwishyura bitinze yabitswe"
+      "conversionRateHint": "urugero 2: umusanzu utishyuwe uhinduka inguzanyo ya 2% buri kwezi.",
+      "saved": "Amabwiriza yo kwishyura bitinze yabitswe",
+      "conversionTerm": "Yishyurwa mu mezi",
+      "conversionTermHint": "Igihe cy'inguzanyo ikomoka ku musanzu utishyuwe (ubusanzwe 3)."
     }
   },
   "finePayments": {
@@ -4050,7 +4063,8 @@
     "tabsLabel": "Kwinjiza amateka",
     "tabs": {
       "opening": "Amafaranga y’itangira",
-      "transactions": "Ibikorwa by’amateka"
+      "transactions": "Ibikorwa by’amateka",
+      "rotation": "Kuzunguruka n'uko bahagaze"
     },
     "title": "Ibikorwa by’amateka",
     "description": "Injiza amateka y’itariki ku yindi y’itsinda risanzwe ryo kuzigama ku myaka myinshi.",
@@ -4289,6 +4303,18 @@
     "rotatedPaid": "Ibyishyuwe mu kuzunguruka",
     "rotationReceived": "Ibyahawe mu kuzunguruka",
     "advanceNote": "Wahawe {{amount}} RWF mbere yo kuyatanga. Si inguzanyo kandi nta nyungu: imisanzu yawe isigaye ni yo iyishyura.",
-    "owedNote": "Ikimina kikubereyemo {{amount}} RWF yo kuzunguruka: uzayahabwa ku gihe cyawe."
+    "owedNote": "Ikimina kikubereyemo {{amount}} RWF yo kuzunguruka: uzayahabwa ku gihe cyawe.",
+    "owed": "Ibyo ikimina kimubereyemo"
+  },
+  "openingWorkbook": {
+    "title": "Kuzunguruka n'uko abanyamuryango bahagaze mbere yo kwimuka",
+    "help": "Ifishi ya gatatu yo kwimuka, ku kimina cyari gisanzwe gikora. Yinjize nyuma y'ifishi y'abanyamuryango n'igishoro n'iy'inguzanyo.",
+    "step1": "Urupapuro Scheme: uruziga ruriho (ukwezi kwa mbere, amezi, ibihabwa kuri buri mugabane, ikizunguruka kuri buri mugabane, uko imigabane ihabwa), amafaranga yo kuzunguruka ari kuri konti, n'inyungu itaragabanywa. Ku kimina kizigama gusa, siga ubusa imirongo y'uruziga.",
+    "step2": "Urupapuro Turns: umurongo umwe ku munyamuryango n'ukwezi: imigabane ihabwa muri uko kwezi n'ibyo yamaze guhabwa.",
+    "step3": "Urupapuro Members: amafaranga yazungurutse buri munyamuryango yishyuye mbere yo kwimuka, n'ayo ikimina kimubereyemo.",
+    "download": "Kuramo ifishi",
+    "upload": "Ohereza ifishi yujujwe",
+    "result": "Abanyamuryango {{members}} bavuguruwe; ibyo ikimina kibereyemo abanyamuryango {{owed}} RWF; inyungu yo kugabana {{income}} RWF.",
+    "rotationResult": "Kuzunguruka: hishyuwe {{paid}}, hatanzwe {{received}}, bityo {{expected}} RWF yagombye kuba kuri konti (itandukaniro {{difference}})."
   }
 }

@@ -29,5 +29,6 @@ public class FineSettingsResponse {
     private String penaltyBands;
     private boolean perShare;
     private Integer creditConversionDays;
+    private Integer creditConversionTermMonths;
     private BigDecimal creditConversionRatePercent;
 }

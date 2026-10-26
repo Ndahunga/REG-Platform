@@ -1138,6 +1138,17 @@
       "confirmRequired": "Confirm that you understand before saving",
       "submit": "Save operating model",
       "success": "Operating model saved"
+    },
+    "change": {
+      "title": "Change the operating model",
+      "help": "Schemes change their rules. The change applies from a month that has not begun; months already started keep their model. Set the rotating split for the new months if the scheme starts rotating.",
+      "newModel": "New model",
+      "from": "From month",
+      "reason": "Reason (optional)",
+      "submit": "Schedule change",
+      "scheduled": "Change scheduled",
+      "pending": "Changes to {{model}} from {{month}}.",
+      "cancel": "Cancel change"
     }
   },
   "cooperatives": {
@@ -1913,8 +1924,10 @@
       "conversionDays": "Convert to credit after (days)",
       "conversionDaysHint": "e.g. 30. Leave empty to switch off.",
       "conversionRate": "Monthly charge (%)",
-      "conversionRateHint": "e.g. 2 means 2% a month on what is still unpaid.",
-      "saved": "Late payment policy saved"
+      "conversionRateHint": "e.g. 2: the unpaid contribution becomes a loan at 2% a month.",
+      "saved": "Late payment policy saved",
+      "conversionTerm": "Repaid over (months)",
+      "conversionTermHint": "Term of the loan created from the unpaid contribution (default 3)."
     }
   },
   "finePayments": {
@@ -4050,7 +4063,8 @@
     "tabsLabel": "Historical imports",
     "tabs": {
       "opening": "Opening balances",
-      "transactions": "Historical transactions"
+      "transactions": "Historical transactions",
+      "rotation": "Rotation & positions"
     },
     "title": "Historical transactions",
     "description": "Import the dated history of an existing Saving Scheme across several years.",
@@ -4289,6 +4303,18 @@
     "rotatedPaid": "Paid into rotation",
     "rotationReceived": "Rotation payouts received",
     "advanceNote": "You received {{amount}} RWF ahead of contributing it. It is not a loan and has no interest: your remaining monthly contributions repay it.",
-    "owedNote": "The scheme still owes you {{amount}} RWF of rotation: it is paid on your turn."
+    "owedNote": "The scheme still owes you {{amount}} RWF of rotation: it is paid on your turn.",
+    "owed": "Owed to member"
+  },
+  "openingWorkbook": {
+    "title": "Rotation and opening positions",
+    "help": "The third migration workbook, for a scheme that was already running. Import it after the members & share-capital workbook and the loans workbook.",
+    "step1": "Scheme sheet: the running cycle (first month, months, payout per share, rotated amount per share, how shares are paid), the rotation money in the bank at the cutover, and income earned before the cutover not yet shared. Leave the cycle rows empty for an accumulating scheme.",
+    "step2": "Turns sheet: one row per member and month: shares paid in that month and what was already received before the cutover.",
+    "step3": "Members sheet: rotated money each member paid before the cutover, and any amount the scheme owes the member.",
+    "download": "Download template",
+    "upload": "Upload filled workbook",
+    "result": "{{members}} members updated; owed to members {{owed}} RWF; income to share {{income}} RWF.",
+    "rotationResult": "Rotation: paid in {{paid}}, paid out {{received}}, so {{expected}} RWF should be in the bank (difference {{difference}})."
   }
 }

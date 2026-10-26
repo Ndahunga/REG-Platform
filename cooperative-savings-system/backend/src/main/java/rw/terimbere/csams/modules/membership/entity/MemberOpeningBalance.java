@@ -63,4 +63,9 @@ public class MemberOpeningBalance extends BaseEntity {
     @Builder.Default
     @Column(name = "opening_rotation_received", nullable = false, precision = 19, scale = 4)
     private java.math.BigDecimal openingRotationReceived = java.math.BigDecimal.ZERO;
+
+    /** Money the scheme owed the member at the cutover (a liability to the member, not capital). */
+    @Builder.Default
+    @Column(name = "opening_owed_to_member", nullable = false, precision = 19, scale = 4)
+    private java.math.BigDecimal openingOwedToMember = java.math.BigDecimal.ZERO;
 }

@@ -24,6 +24,7 @@ export function FinePolicyCard({ cooperativeId }: { cooperativeId: string }) {
   const [perShare, setPerShare] = useState(false)
   const [days, setDays] = useState('')
   const [rate, setRate] = useState('')
+  const [term, setTerm] = useState('')
 
   useEffect(() => {
     const s = query.data
@@ -33,6 +34,7 @@ export function FinePolicyCard({ cooperativeId }: { cooperativeId: string }) {
     setPerShare(Boolean(s.perShare))
     setDays(s.creditConversionDays ? String(s.creditConversionDays) : '')
     setRate(s.creditConversionRatePercent ? String(Number(s.creditConversionRatePercent)) : '')
+    setTerm(s.creditConversionTermMonths ? String(s.creditConversionTermMonths) : '')
   }, [query.data])
 
   const mutation = useMutation({
@@ -48,6 +50,7 @@ export function FinePolicyCard({ cooperativeId }: { cooperativeId: string }) {
         perShare,
         creditConversionDays: days.trim() ? Number(days) : 0,
         creditConversionRatePercent: rate.trim() ? Number(rate) : 0,
+        creditConversionTermMonths: term.trim() ? Number(term) : undefined,
       })
     },
     onSuccess: () => {
@@ -97,6 +100,14 @@ export function FinePolicyCard({ cooperativeId }: { cooperativeId: string }) {
             value={rate}
             onChange={(e) => setRate(e.target.value)}
             helperText={t('fines.policy.conversionRateHint')}
+            disabled={!canEdit}
+            fullWidth
+          />
+          <TextField
+            label={t('fines.policy.conversionTerm')}
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            helperText={t('fines.policy.conversionTermHint')}
             disabled={!canEdit}
             fullWidth
           />

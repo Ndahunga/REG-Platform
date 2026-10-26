@@ -26,6 +26,7 @@ import rw.terimbere.csams.shared.common.dto.ApiResponse;
 public class MemberPositionController {
 
     private final MemberPositionService service;
+    private final rw.terimbere.csams.modules.rotation.service.OpeningPositionsWorkbookService workbookService;
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
@@ -49,6 +50,26 @@ public class MemberPositionController {
         return ResponseEntity.ok(ApiResponse.ok(service.member(cooperativeId, memberUserId)));
     }
 
+    @GetMapping("/opening-workbook/template")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Download the rotation and opening-positions migration workbook (third migration workbook)")
+    public ResponseEntity<byte[]> openingTemplate(@PathVariable UUID cooperativeId) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"ikimina-rotation-and-positions-template.xlsx\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(workbookService.template(cooperativeId));
+    }
+
+    @org.springframework.web.bind.annotation.PostMapping(value = "/opening-workbook", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('COOPERATIVE_WRITE')")
+    @Operation(summary = "Import the rotation and opening-positions workbook (after the members and loans workbooks)")
+    public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.rotation.service.OpeningPositionsWorkbookService.ImportResult>> openingImport(
+            @PathVariable UUID cooperativeId,
+            @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file,
+            jakarta.servlet.http.HttpServletRequest http) {
+        return ResponseEntity.ok(ApiResponse.ok(workbookService.importWorkbook(cooperativeId, file, http)));
+    }
+
     @GetMapping(value = "/export.csv", produces = "text/csv")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Members' positions as CSV (opens in Excel)")
@@ -57,13 +78,13 @@ public class MemberPositionController {
         StringBuilder sb = new StringBuilder();
         sb.append("Member,Shares,Opening capital,Contributed capital,Share purchases,Share-out paid,Capital,Income share,")
                 .append("Rotated paid (opening),Rotated paid,Rotation received (opening),Rotation received,Rotation position,")
-                .append("Contribution arrears,Loans outstanding,Fines outstanding,Unclassified paid,Net position\n");
+                .append("Contribution arrears,Loans outstanding,Fines outstanding,Owed to member,Unclassified paid,Net position\n");
         for (var m : scheme.members()) {
             sb.append(csv(m.memberName())).append(',').append(m.shares());
             for (BigDecimal v : new BigDecimal[] {
                 m.openingCapital(), m.contributedCapital(), m.sharePurchases(), m.shareOutPaid(), m.capital(), m.incomeShare(),
                 m.openingRotationPaid(), m.rotatedPaid(), m.openingRotationReceived(), m.rotationReceived(), m.rotationPosition(),
-                m.contributionArrears(), m.loansOutstanding(), m.finesOutstanding(), m.unclassifiedPaid(), m.netPosition()
+                m.contributionArrears(), m.loansOutstanding(), m.finesOutstanding(), m.owedToMember(), m.unclassifiedPaid(), m.netPosition()
             }) {
                 sb.append(',').append(v.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString());
             }

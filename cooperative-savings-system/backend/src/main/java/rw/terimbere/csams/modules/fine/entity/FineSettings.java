@@ -69,4 +69,8 @@ public class FineSettings extends BaseEntity {
 
     @Column(name = "credit_conversion_rate_percent", precision = 8, scale = 4)
     private BigDecimal creditConversionRatePercent;
+
+    /** Months over which a converted contribution is repaid as a loan. */
+    @Column(name = "credit_conversion_term_months")
+    private Integer creditConversionTermMonths;
 }

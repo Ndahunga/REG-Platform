@@ -326,7 +326,7 @@ public class CooperativeService {
         return toResponse(cooperativeRepository.save(cooperative));
     }
 
-    private void requireWriteAccess(UserPrincipal principal, UUID cooperativeId) {
+    void requireWriteAccess(UserPrincipal principal, UUID cooperativeId) {
         if (principal.hasRole(CooperativeAuthorizationService.SUPER_ADMIN)
                 && principal.hasAuthority("COOPERATIVE_WRITE")) {
             return;

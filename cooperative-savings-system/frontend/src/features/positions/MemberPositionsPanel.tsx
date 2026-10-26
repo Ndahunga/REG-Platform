@@ -82,6 +82,7 @@ function SchemePositions({ cooperativeId }: { cooperativeId: string }) {
               <TableCell align="right">{t('positions.arrears')}</TableCell>
               <TableCell align="right">{t('positions.loans')}</TableCell>
               <TableCell align="right">{t('positions.fines')}</TableCell>
+              <TableCell align="right">{t('positions.owed')}</TableCell>
               <TableCell align="right">{t('positions.net')}</TableCell>
             </TableRow>
           </TableHead>
@@ -98,6 +99,7 @@ function SchemePositions({ cooperativeId }: { cooperativeId: string }) {
                 <TableCell align="right">{money(m.contributionArrears)}</TableCell>
                 <TableCell align="right">{money(m.loansOutstanding)}</TableCell>
                 <TableCell align="right">{money(m.finesOutstanding)}</TableCell>
+                <TableCell align="right">{money(m.owedToMember)}</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>
                   {money(m.netPosition)}
                 </TableCell>
@@ -112,6 +114,7 @@ function SchemePositions({ cooperativeId }: { cooperativeId: string }) {
               <TableCell />
               <TableCell align="right">{money(s.totalLoansOutstanding)}</TableCell>
               <TableCell align="right">{money(s.totalFinesOutstanding)}</TableCell>
+              <TableCell align="right">{money(s.totalOwedToMembers)}</TableCell>
               <TableCell />
             </TableRow>
           </TableBody>
@@ -143,6 +146,7 @@ export function Statement({ position: m }: { position: MemberPosition }) {
     [t('positions.rotation'), m.rotationPosition],
     [t('positions.loans'), -Number(m.loansOutstanding)],
     [t('positions.fines'), -Number(m.finesOutstanding)],
+    [t('positions.owed'), m.owedToMember],
   ]
   return (
     <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, border: '1px solid', borderColor: 'divider', mb: 3 }} data-testid="my-statement">
