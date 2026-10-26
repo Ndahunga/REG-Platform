@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -334,6 +335,74 @@ public class ContributionObligationService {
                     null);
         }
         return new MaterializeResponse(year, month, created, members.size() - created, members.size());
+    }
+
+    /**
+     * Creates the missing obligation rows of every active member for each of {@code months} (current month or later),
+     * inside the caller's transaction and under the caller's authorization. Used when a rotation cycle is activated so
+     * the whole cycle is owed from day one: a member paid early sees every month still to contribute. Existing rows are
+     * never touched. Returns how many rows were created.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public int materializeMonths(UUID cooperativeId, List<YearMonth> months, UUID actorId) {
+        Cooperative cooperative = cooperativeRepository
+                .findByIdAndDeletedFalse(cooperativeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cooperative", cooperativeId));
+        YearMonth current = ContributionDueDates.currentMonth(clock);
+        evict(cooperativeId);
+        List<CooperativeMembership> members =
+                membershipRepository.findByCooperativeIdAndMembershipStatus(cooperativeId, "ACTIVE");
+        int created = 0;
+        for (YearMonth ym : months) {
+            if (ym.isBefore(current)) {
+                continue;
+            }
+            Set<UUID> existing = contributionRepository
+                    .findByCooperativeIdAndYearAndMonth(cooperativeId, ym.getYear(), ym.getMonthValue())
+                    .stream()
+                    .map(Contribution::getMemberUserId)
+                    .collect(Collectors.toSet());
+            List<Contribution> toSave = new ArrayList<>();
+            for (CooperativeMembership membership : members) {
+                if (existing.contains(membership.getUserId())) {
+                    continue;
+                }
+                int shares = ShareAmountCalculator.normalizeShareCount(membership.getShareCount());
+                if (shares <= 0) {
+                    continue;
+                }
+                BigDecimal expected = ShareAmountCalculator.expectedMonthly(cooperative.getMonthlyContributionAmount(), shares);
+                Contribution row = Contribution.builder()
+                        .cooperativeId(cooperativeId)
+                        .memberUserId(membership.getUserId())
+                        .year(ym.getYear())
+                        .month(ym.getMonthValue())
+                        .shareCount(shares)
+                        .expectedAmount(expected)
+                        .paidAmount(BigDecimal.ZERO)
+                        .outstandingAmount(expected)
+                        .status(ContributionStatus.PENDING)
+                        .ledgerRevision(0)
+                        .build();
+                snapshotFor(cooperative, membership, ym.getYear(), ym.getMonthValue(), false).writeTo(row, Instant.now(clock));
+                toSave.add(row);
+            }
+            contributionRepository.saveAllAndFlush(toSave);
+            created += toSave.size();
+        }
+        if (created > 0) {
+            auditService.record(
+                    actorId,
+                    cooperativeId,
+                    AuditableAction.CONTRIBUTION_OBLIGATIONS_MATERIALIZE,
+                    "ContributionPeriod",
+                    null,
+                    null,
+                    "{\"months\":" + months.size() + ",\"created\":" + created + "}",
+                    null,
+                    null);
+        }
+        return created;
     }
 
     // ------------------------------------------------------------------ late-payment attribution (read only)

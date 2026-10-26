@@ -52,4 +52,15 @@ public interface RotationPayoutRepository extends JpaRepository<RotationPayout, 
             + " and p.status in :statuses group by p.recipientUserId")
     java.util.List<Object[]> sumAmountByRecipient(
             @Param("cooperativeId") UUID cooperativeId, @Param("statuses") Collection<RotationPayoutStatus> statuses);
+
+    List<RotationPayout> findByCooperativeIdAndRotationTurnId(UUID cooperativeId, UUID rotationTurnId);
+
+    List<RotationPayout> findByCooperativeIdAndRotationTurnIdIn(UUID cooperativeId, Collection<UUID> rotationTurnIds);
+
+    @Query("select coalesce(sum(p.amount), 0) from RotationPayout p where p.cooperativeId = :cooperativeId"
+            + " and p.rotationTurnId = :turnId and p.status in :statuses")
+    BigDecimal sumAmountForTurn(
+            @Param("cooperativeId") UUID cooperativeId,
+            @Param("turnId") UUID turnId,
+            @Param("statuses") Collection<RotationPayoutStatus> statuses);
 }

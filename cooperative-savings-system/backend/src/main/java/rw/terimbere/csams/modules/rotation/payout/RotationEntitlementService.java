@@ -79,6 +79,9 @@ public class RotationEntitlementService {
     private final UserRepository userRepository;
     private final LegacyReconciliationRepository reconciliationRepository;
     private final MemberCreditEntryRepository creditRepository;
+    private final RotationPayoutOffsetRepository offsetRepository;
+    private final rw.terimbere.csams.modules.rotation.repository.RotationCycleRepository cycleRepository;
+    private final rw.terimbere.csams.modules.rotation.pool.RotationPoolEntryRepository poolEntryRepository;
 
     public record PeriodEntitlement(
             UUID periodId,
@@ -176,20 +179,28 @@ public class RotationEntitlementService {
     }
 
     private Map<UUID, BigDecimal> verifiedForPeriod(UUID cooperativeId, UUID periodId) {
-        return verifiedAmounts(
+        return withOffsets(offsetRepository.findByCooperativeIdAndRotationPeriodId(cooperativeId, periodId), verifiedAmounts(
                 postingRepository.findByCooperativeIdAndRotationPeriodIdOrderByPostedAtAscIdAsc(cooperativeId, periodId),
                 postingReversalRepository.findByCooperativeIdAndRotationPeriodId(cooperativeId, periodId),
                 reconciliationRepository.findByCooperativeIdAndRotationPeriodIdAndStatus(
                         cooperativeId, periodId, LegacyReconciliationStatus.APPROVED),
-                creditRepository.findAppliedToPeriod(cooperativeId, periodId));
+                creditRepository.findAppliedToPeriod(cooperativeId, periodId)));
+    }
+
+    /** Arrears settled from a turn payout are the scheme's own approved money: verified like a posted payment. */
+    private static Map<UUID, BigDecimal> withOffsets(List<RotationPayoutOffset> offsets, Map<UUID, BigDecimal> verified) {
+        for (RotationPayoutOffset o : offsets) {
+            verified.merge(o.getContributionId(), o.getAmount(), BigDecimal::add);
+        }
+        return verified;
     }
 
     private Map<UUID, BigDecimal> verifiedForScheme(UUID cooperativeId) {
-        return verifiedAmounts(
+        return withOffsets(offsetRepository.findByCooperativeId(cooperativeId), verifiedAmounts(
                 postingRepository.findByCooperativeIdAndRotationPeriodIdIsNotNull(cooperativeId),
                 postingReversalRepository.findByCooperativeIdAndRotationPeriodIdIsNotNull(cooperativeId),
                 reconciliationRepository.findByCooperativeIdAndStatus(cooperativeId, LegacyReconciliationStatus.APPROVED),
-                creditRepository.findAppliedToRotationBound(cooperativeId));
+                creditRepository.findAppliedToRotationBound(cooperativeId)));
     }
 
     /** Verified amount of every rotation-bound obligation of the scheme (contribution id to amount). */
@@ -226,16 +237,41 @@ public class RotationEntitlementService {
                         cooperativeId, userId));
     }
 
-    /** Total recipient entitlement still owed across the scheme (verified money only): a liability, never member capital. */
+    /**
+     * Total recipient money still owed across the scheme (verified money only): a liability, never member capital. A
+     * period-collection period owes its own collections less its payouts; the periods of share-based cycles form one pool
+     * held for their turns (their collections less their payouts).
+     */
     @Transactional(readOnly = true)
     public BigDecimal totalOutstandingEntitlement(UUID cooperativeId) {
-        // Owed per period, then added up: a payout that a period's reserve cover paid above its own collections must not
-        // reduce what another period's recipient is still owed.
+        Set<UUID> share = sharePeriodIds(cooperativeId);
         BigDecimal owed = BigDecimal.ZERO;
+        BigDecimal shareHeld = BigDecimal.ZERO;
         for (PeriodEntitlement period : overview(cooperativeId)) {
-            owed = owed.add(period.outstandingEntitlement());
+            if (share.contains(period.periodId())) {
+                shareHeld = shareHeld.add(period.collectedRotating()).subtract(period.distributed());
+            } else {
+                owed = owed.add(period.outstandingEntitlement());
+            }
         }
-        return MoneyUtils.scaleForStorage(owed);
+        return MoneyUtils.scaleForStorage(owed.add(shareHeld.max(BigDecimal.ZERO)));
+    }
+
+    /** The periods that belong to share-based (fixed payout per share) cycles of the scheme. */
+    @Transactional(readOnly = true)
+    public Set<UUID> sharePeriodIds(UUID cooperativeId) {
+        Set<UUID> cycles = new HashSet<>();
+        cycleRepository.findByCooperativeIdOrderByCycleNumberDesc(cooperativeId).stream()
+                .filter(rw.terimbere.csams.modules.rotation.entity.RotationCycle::isShareBased)
+                .forEach(c -> cycles.add(c.getId()));
+        if (cycles.isEmpty()) {
+            return Set.of();
+        }
+        Set<UUID> periods = new HashSet<>();
+        for (RotationPeriod p : periodRepository.findByCooperativeIdAndCycleIdInOrderByCycleIdAscSequenceNumberAsc(cooperativeId, cycles)) {
+            periods.add(p.getId());
+        }
+        return periods;
     }
 
     /**
@@ -318,6 +354,10 @@ public class RotationEntitlementService {
             return false;
         }
         UUID cooperativeId = row.getCooperativeId();
+        Set<UUID> share = sharePeriodIds(cooperativeId);
+        if (share.contains(row.getRotationPeriodId())) {
+            return wouldUndercutSharePool(row, newPaid, removedVerifiedAmount, share);
+        }
         BigDecimal committed = distributedOrApproved(cooperativeId, row.getRotationPeriodId());
         if (committed.signum() == 0) {
             return false;
@@ -334,6 +374,31 @@ public class RotationEntitlementService {
                 .max(BigDecimal.ZERO);
         BigDecimal rowAfter = rotatingOf(row, rowVerified.min(newPaid == null ? BigDecimal.ZERO : newPaid));
         return MoneyUtils.scaleForStorage(others.add(rowAfter)).compareTo(committed) < 0;
+    }
+
+    /** Share-based periods pay from one pool: a correction may not leave that pool below what was paid or approved. */
+    private boolean wouldUndercutSharePool(Contribution row, BigDecimal newPaid, BigDecimal removedVerifiedAmount, Set<UUID> share) {
+        UUID cooperativeId = row.getCooperativeId();
+        Map<UUID, BigDecimal> net = verifiedForScheme(cooperativeId);
+        BigDecimal collected = BigDecimal.ZERO;
+        for (Contribution other : contributionRepository.findByCooperativeIdAndRotationPeriodIdIsNotNull(cooperativeId)) {
+            if (!share.contains(other.getRotationPeriodId()) || other.getId().equals(row.getId())) {
+                continue;
+            }
+            collected = collected.add(eligibleRotating(other, net.get(other.getId())));
+        }
+        BigDecimal rowVerified = net.getOrDefault(row.getId(), BigDecimal.ZERO)
+                .subtract(removedVerifiedAmount == null ? BigDecimal.ZERO : removedVerifiedAmount)
+                .max(BigDecimal.ZERO);
+        collected = collected.add(rotatingOf(row, rowVerified.min(newPaid == null ? BigDecimal.ZERO : newPaid)));
+        BigDecimal committed = BigDecimal.ZERO;
+        for (UUID periodId : share) {
+            committed = committed.add(distributedOrApproved(cooperativeId, periodId));
+        }
+        BigDecimal cover = poolEntryRepository.sumByType(cooperativeId, rw.terimbere.csams.modules.rotation.pool.PoolEntryType.OPENING)
+                .add(poolEntryRepository.sumByType(cooperativeId, rw.terimbere.csams.modules.rotation.pool.PoolEntryType.TOP_UP))
+                .subtract(poolEntryRepository.sumByType(cooperativeId, rw.terimbere.csams.modules.rotation.pool.PoolEntryType.EXPENSE));
+        return MoneyUtils.scaleForStorage(collected.add(cover)).compareTo(MoneyUtils.scaleForStorage(committed)) < 0;
     }
 
     /** Postings attributed to the period: the recovery history of its recipient, with late ones flagged. */

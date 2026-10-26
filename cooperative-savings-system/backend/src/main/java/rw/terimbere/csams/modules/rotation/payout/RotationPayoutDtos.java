@@ -21,7 +21,11 @@ public final class RotationPayoutDtos {
     @Data
     @NoArgsConstructor
     public static class RequestPayout {
-        @NotNull private UUID rotationPeriodId;
+        /** The period of a period-collection cycle. Not needed when {@link #rotationTurnId} is given. */
+        private UUID rotationPeriodId;
+
+        /** The turn of a share-based cycle. */
+        private UUID rotationTurnId;
 
         /** Optional. Defaults to the most the entitlement and the available funds allow (a partial payout if needed). */
         @DecimalMin("0.01")
@@ -118,7 +122,29 @@ public final class RotationPayoutDtos {
             PaymentMethod disbursementMethod,
             String disbursementReference,
             String disbursementNote,
-            PayoutActions actions) {}
+            PayoutActions actions,
+            UUID rotationTurnId,
+            /** Of the amount, what settles the recipient's overdue contributions instead of being paid in cash. */
+            BigDecimal arrearsNetted,
+            /** What is handed over: amount less arrears netted. */
+            BigDecimal cashAmount) {}
+
+    /** Whether a payout can be requested for a turn of a share-based cycle right now. */
+    public record TurnPayoutEligibility(
+            UUID turnId,
+            UUID periodId,
+            int periodYear,
+            int periodMonth,
+            UUID memberUserId,
+            String memberName,
+            int shares,
+            BigDecimal payoutAmount,
+            BigDecimal outstanding,
+            /** The member's unpaid contributions of months already due: netted from the payout. */
+            BigDecimal arrears,
+            boolean canRequestPayout,
+            String payoutBlockedReason,
+            BigDecimal maxRequestable) {}
 
     public record EventResponse(
             UUID id,

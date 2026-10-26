@@ -59,6 +59,13 @@ public class RotationPoolController {
         return ResponseEntity.ok(ApiResponse.ok(poolService.scheme(cooperativeId)));
     }
 
+    @GetMapping("/share")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "The pool paying the turns of share-based cycles (officers)")
+    public ResponseEntity<ApiResponse<RotationPoolService.SharePool>> sharePool(@PathVariable UUID cooperativeId) {
+        return ResponseEntity.ok(ApiResponse.ok(poolService.sharePoolView(cooperativeId)));
+    }
+
     @GetMapping("/entries")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "The pool's opening, top-up and expense records (officers)")

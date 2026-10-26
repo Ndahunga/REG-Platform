@@ -50,6 +50,59 @@ public final class RotationDtos {
             @NotNull @Min(1) @Max(12) Integer startMonth,
             @NotEmpty @Size(max = 240) List<@NotNull UUID> recipientUserIds) {}
 
+    /**
+     * A share-based cycle: {@code months} monthly slots from the start month; every share has one turn worth
+     * {@code payoutPerShare}; a month may hold several turns. {@code turns} places each member's shares in months
+     * (monthIndex 1 = the start month).
+     */
+    public record ShareCycleCreateRequest(
+            @NotNull @Min(2000) @Max(2100) Integer startYear,
+            @NotNull @Min(1) @Max(12) Integer startMonth,
+            @NotNull @Min(1) @Max(240) Integer months,
+            @NotNull @jakarta.validation.constraints.Positive java.math.BigDecimal payoutPerShare,
+            rw.terimbere.csams.modules.rotation.entity.RotationTurnMode turnMode,
+            @NotEmpty @Size(max = 2000) List<@NotNull @jakarta.validation.Valid TurnInput> turns) {}
+
+    /**
+     * One turn. {@code openingReceivedAmount}/{@code openingReceivedDate} are used only when a running cycle is imported
+     * at migration: what the member already received for this turn before the cutover.
+     */
+    public record TurnInput(
+            @NotNull @Min(1) @Max(240) Integer monthIndex,
+            @NotNull UUID memberUserId,
+            @NotNull @Min(1) @Max(100) Integer shares,
+            @jakarta.validation.constraints.PositiveOrZero java.math.BigDecimal openingReceivedAmount,
+            java.time.LocalDate openingReceivedDate) {}
+
+    public record TurnReassignRequest(@NotNull UUID memberUserId, @NotBlank @Size(max = 1000) String reason) {}
+
+    public record TurnResponse(
+            UUID id,
+            UUID periodId,
+            int year,
+            int month,
+            UUID memberUserId,
+            String memberName,
+            int shares,
+            java.math.BigDecimal payoutAmount,
+            /** Received for this turn before the scheme moved to the platform. */
+            java.math.BigDecimal openingReceived,
+            java.math.BigDecimal paidOut,
+            java.math.BigDecimal committed,
+            /** Still to be paid for this turn: payout less opening received, paid out and committed. */
+            java.math.BigDecimal outstanding,
+            /** UPCOMING, DUE (its month has begun), PARTLY_PAID or PAID. */
+            String state) {}
+
+    /** Whether the rotated contributions over the cycle cover what the turns pay; a check the officers read, not a rule. */
+    public record FundingCheck(
+            int sharesWithTurns,
+            int sharesHeldByMembers,
+            java.math.BigDecimal rotatedPerShareMonthly,
+            java.math.BigDecimal expectedCollections,
+            java.math.BigDecimal totalPayouts,
+            List<String> warnings) {}
+
     public record CancelRequest(@NotBlank @Size(max = 1000) String reason) {}
 
     public record RecipientChangeRequest(
@@ -77,7 +130,14 @@ public final class RotationDtos {
             Instant activatedAt,
             Instant cancelledAt,
             String cancelReason,
-            List<PeriodResponse> periods) {}
+            List<PeriodResponse> periods,
+            rw.terimbere.csams.modules.rotation.entity.RotationPayoutMode payoutMode,
+            java.math.BigDecimal payoutPerShare,
+            rw.terimbere.csams.modules.rotation.entity.RotationTurnMode turnMode,
+            /** Turns of a share-based cycle in calendar order; empty for a period-collection cycle. */
+            List<TurnResponse> turns,
+            /** For a share-based cycle; null otherwise. */
+            FundingCheck fundingCheck) {}
 
     public record RecipientChangeResponse(
             UUID id,

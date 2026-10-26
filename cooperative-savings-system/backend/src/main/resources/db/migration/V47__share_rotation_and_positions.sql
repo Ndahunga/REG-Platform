@@ -74,6 +74,27 @@ ALTER TABLE rotation_payouts ADD CONSTRAINT chk_rotation_payouts_open_key CHECK 
 );
 CREATE INDEX idx_rotation_payouts_turn ON rotation_payouts (cooperative_id, rotation_turn_id, status);
 
+-- A turn payout is netted only by the recipient's unpaid contributions of months already due (never by loans or
+-- fines). The netted part never leaves as cash: at disbursement it is applied to those contributions, oldest first,
+-- and each application is recorded here. It counts as verified money (it is the scheme's own payout, already approved).
+ALTER TABLE rotation_payouts ADD COLUMN arrears_netted NUMERIC(19,4) NOT NULL DEFAULT 0;
+ALTER TABLE rotation_payouts ADD CONSTRAINT chk_rotation_payouts_arrears
+    CHECK (arrears_netted >= 0 AND arrears_netted <= amount);
+
+CREATE TABLE rotation_payout_offsets (
+    id              UUID            PRIMARY KEY,
+    cooperative_id  UUID            NOT NULL,
+    payout_id       UUID            NOT NULL REFERENCES rotation_payouts (id),
+    contribution_id UUID            NOT NULL REFERENCES contributions (id),
+    rotation_period_id UUID,
+    amount          NUMERIC(19,4)   NOT NULL CHECK (amount > 0),
+    created_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    version         BIGINT          NOT NULL DEFAULT 0,
+    CONSTRAINT uq_rotation_payout_offsets UNIQUE (payout_id, contribution_id)
+);
+CREATE INDEX idx_rotation_payout_offsets_coop ON rotation_payout_offsets (cooperative_id, rotation_period_id);
+
 -- 3. Opening rotation position carried in by a migration: rotated money the member had paid into the current cycle
 --    before the cutover, and payouts they had already received. Read by the member position (statement) service.
 ALTER TABLE member_opening_balances ADD COLUMN opening_rotation_paid NUMERIC(19,4) NOT NULL DEFAULT 0;

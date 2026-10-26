@@ -64,6 +64,7 @@ public class SocialFundService {
     private final AuditService auditService;
     private final ApprovalTrailService approvalTrailService;
     private final NotificationFacade notificationFacade;
+    private final rw.terimbere.csams.modules.fundlock.SchemeFundLockService fundLockService;
 
     @Transactional(readOnly = true)
     public SocialFundSummaryResponse summary(UUID cooperativeId) {
@@ -369,6 +370,8 @@ public class SocialFundService {
         if (disbursement.getStatus() != SocialDisbursementStatus.PENDING) {
             throw new BusinessException("Only PENDING social disbursements can be approved");
         }
+        // Serializes with every other outflow of the scheme, so two approvals cannot both spend the same balance.
+        fundLockService.lockSchemeFund(cooperativeId);
 
         BigDecimal amount = MoneyUtils.scale(disbursement.getAmount());
         BigDecimal available = balanceService.calculateBalance(cooperativeId);

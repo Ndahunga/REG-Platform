@@ -45,6 +45,8 @@ public class IncomeExpenseService {
     private final LedgerService ledgerService;
     private final CooperativeAuthorizationService authorizationService;
     private final AuditService auditService;
+    private final rw.terimbere.csams.modules.fundlock.SchemeFundLockService fundLockService;
+    private final rw.terimbere.csams.shared.financial.LedgerFinancialCalculationService financialCalculationService;
 
     @Transactional(readOnly = true)
     public PageResponse<IncomeExpenseResponse> list(
@@ -127,6 +129,18 @@ public class IncomeExpenseService {
 
         if (tx.getApprovalStatus() != IncomeExpenseApprovalStatus.PENDING) {
             throw new BusinessException("Only PENDING transactions can be approved");
+        }
+        // Money leaving the scheme serializes with payouts, loans and share-outs, and can never exceed what is there.
+        fundLockService.lockSchemeFund(cooperativeId);
+        boolean outflow = tx.getCategory().name().contains("EXPENSE")
+                || (tx.getCategory() == IncomeExpenseCategory.ADJUSTMENT && tx.getLedgerEffect() == LedgerEffect.DEBIT);
+        if (outflow) {
+            BigDecimal available = MoneyUtils.scaleForStorage(financialCalculationService.calculateAvailableGroupFund(cooperativeId));
+            if (MoneyUtils.scaleForStorage(tx.getAmount()).compareTo(available) > 0) {
+                throw new BusinessException(
+                        "INSUFFICIENT_AVAILABLE_FUNDS",
+                        "The scheme's available funds are " + available.toPlainString() + ", less than this expense");
+            }
         }
 
         tx.setApprovalStatus(IncomeExpenseApprovalStatus.APPROVED);

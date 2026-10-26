@@ -109,4 +109,13 @@ public class RotationPayout extends BaseEntity {
     /** The period id while the payout is open (REQUESTED or APPROVED), otherwise null. */
     @Column(name = "open_key")
     private UUID openKey;
+
+    /** The turn of a share-based cycle this payout pays; null for a period-collection payout. */
+    @Column(name = "rotation_turn_id", updatable = false)
+    private UUID rotationTurnId;
+
+    /** Of the amount, what settles the recipient's unpaid contributions of months already due (not paid as cash). */
+    @Builder.Default
+    @Column(name = "arrears_netted", nullable = false, precision = 19, scale = 4)
+    private BigDecimal arrearsNetted = BigDecimal.ZERO;
 }

@@ -63,4 +63,22 @@ public class RotationCycle extends BaseEntity {
 
     @Column(name = "cancel_reason", length = 1000)
     private String cancelReason;
+
+    /** PERIOD_COLLECTION: each month's recipient gets that month's collection. FIXED_PER_SHARE: each share has a turn. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payout_mode", nullable = false, length = 24)
+    private RotationPayoutMode payoutMode = RotationPayoutMode.PERIOD_COLLECTION;
+
+    /** What one share's turn pays (e.g. 50,000 x 12 = 600,000); set only for FIXED_PER_SHARE. */
+    @Column(name = "payout_per_share", precision = 19, scale = 4)
+    private java.math.BigDecimal payoutPerShare;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "turn_mode", length = 24)
+    private RotationTurnMode turnMode;
+
+    public boolean isShareBased() {
+        return payoutMode == RotationPayoutMode.FIXED_PER_SHARE;
+    }
 }

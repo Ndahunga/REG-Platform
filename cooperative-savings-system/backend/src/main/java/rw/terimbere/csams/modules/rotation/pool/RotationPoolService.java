@@ -146,7 +146,7 @@ public class RotationPoolService {
         }
 
         BigDecimal base = reserveBase(cooperativeId);
-        BigDecimal inUse = reserveInUse(cooperativeId, periodsOf(cooperativeId));
+        BigDecimal inUse = reserveInUse(cooperativeId, periodsOf(cooperativeId)).add(shareReserveInUse(cooperativeId));
         BigDecimal unused = base.subtract(inUse);
         switch (command.type()) {
             case OPENING -> {
@@ -284,8 +284,69 @@ public class RotationPoolService {
         return result;
     }
 
+    /** The period-collection periods (each funds its own recipient); share-based periods are pooled separately. */
     private List<PeriodEntitlement> periodsOf(UUID cooperativeId) {
-        return entitlementService.overview(cooperativeId);
+        java.util.Set<UUID> share = entitlementService.sharePeriodIds(cooperativeId);
+        List<PeriodEntitlement> all = entitlementService.overview(cooperativeId);
+        return share.isEmpty() ? all : all.stream().filter(p -> !share.contains(p.periodId())).toList();
+    }
+
+    // ------------------------------------------------------------------ share-based cycles
+
+    /**
+     * The pool that pays the turns of share-based cycles: verified rotating money collected in their months, plus the
+     * reserve (opening pool, top-ups, less expenses) not already covering a period-collection payout, less what their
+     * turns were paid or have committed.
+     */
+    public record SharePool(
+            BigDecimal collected, BigDecimal reserveFree, BigDecimal paidOut, BigDecimal committed, BigDecimal available) {}
+
+    @Transactional(readOnly = true)
+    public SharePool sharePool(UUID cooperativeId) {
+        java.util.Set<UUID> share = entitlementService.sharePeriodIds(cooperativeId);
+        List<PeriodEntitlement> all = entitlementService.overview(cooperativeId);
+        BigDecimal collected = BigDecimal.ZERO;
+        BigDecimal paid = BigDecimal.ZERO;
+        BigDecimal committed = BigDecimal.ZERO;
+        List<PeriodEntitlement> legacy = new java.util.ArrayList<>();
+        for (PeriodEntitlement p : all) {
+            if (share.contains(p.periodId())) {
+                collected = collected.add(p.collectedRotating());
+                paid = paid.add(p.distributed());
+                committed = committed.add(p.committed());
+            } else {
+                legacy.add(p);
+            }
+        }
+        BigDecimal reserveFree = reserveBase(cooperativeId).subtract(reserveInUse(cooperativeId, legacy)).max(BigDecimal.ZERO);
+        BigDecimal available = collected.add(reserveFree).subtract(paid).subtract(committed).max(BigDecimal.ZERO);
+        return new SharePool(
+                MoneyUtils.scaleForStorage(collected),
+                MoneyUtils.scaleForStorage(reserveFree),
+                MoneyUtils.scaleForStorage(paid),
+                MoneyUtils.scaleForStorage(committed),
+                MoneyUtils.scaleForStorage(available));
+    }
+
+    /** Reserve that share-based turns are using: what they paid or committed above their own verified collections. */
+    private BigDecimal shareReserveInUse(UUID cooperativeId) {
+        java.util.Set<UUID> share = entitlementService.sharePeriodIds(cooperativeId);
+        if (share.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal net = BigDecimal.ZERO;
+        for (PeriodEntitlement p : entitlementService.overview(cooperativeId)) {
+            if (share.contains(p.periodId())) {
+                net = net.add(p.distributed()).add(p.committed()).subtract(p.collectedRotating());
+            }
+        }
+        return net.max(BigDecimal.ZERO);
+    }
+
+    @Transactional(readOnly = true)
+    public SharePool sharePoolView(UUID cooperativeId) {
+        requireStaff(cooperativeId);
+        return sharePool(cooperativeId);
     }
 
     private BigDecimal reserveBase(UUID cooperativeId) {
@@ -341,13 +402,14 @@ public class RotationPoolService {
         BigDecimal opening = MoneyUtils.scaleForStorage(entryRepository.sumByType(cooperativeId, PoolEntryType.OPENING));
         BigDecimal topUps = MoneyUtils.scaleForStorage(entryRepository.sumByType(cooperativeId, PoolEntryType.TOP_UP));
         BigDecimal expenses = MoneyUtils.scaleForStorage(entryRepository.sumByType(cooperativeId, PoolEntryType.EXPENSE));
-        BigDecimal collected = MoneyUtils.scaleForStorage(
-                periods.stream().map(PeriodEntitlement::collectedRotating).reduce(BigDecimal.ZERO, BigDecimal::add));
+        BigDecimal collected = MoneyUtils.scaleForStorage(entitlementService.overview(cooperativeId).stream()
+                .map(PeriodEntitlement::collectedRotating)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         BigDecimal previous = MoneyUtils.scaleForStorage(payoutRepository.sumAmountForScheme(cooperativeId, DISBURSED));
         BigDecimal committed = MoneyUtils.scaleForStorage(payoutRepository.sumAmountForScheme(cooperativeId, OPEN));
         BigDecimal available = MoneyUtils.scaleForStorage(
                 opening.add(collected).add(topUps).subtract(expenses).subtract(previous));
-        BigDecimal inUse = reserveInUse(cooperativeId, periods);
+        BigDecimal inUse = MoneyUtils.scaleForStorage(reserveInUse(cooperativeId, periods).add(shareReserveInUse(cooperativeId)));
         BigDecimal unused = MoneyUtils.scaleForStorage(opening.add(topUps).subtract(expenses).subtract(inUse));
         return new SchemePool(opening, topUps, expenses, collected, previous, committed, available, unused, inUse);
     }

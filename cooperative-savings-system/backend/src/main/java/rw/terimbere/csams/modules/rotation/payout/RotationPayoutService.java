@@ -86,6 +86,12 @@ public class RotationPayoutService {
     private final NotificationFacade notificationFacade;
     private final UserRepository userRepository;
     private final rw.terimbere.csams.modules.rotation.pool.RotationPoolService poolService;
+    private final rw.terimbere.csams.modules.rotation.repository.RotationTurnRepository turnRepository;
+    private final rw.terimbere.csams.modules.rotation.repository.RotationCycleRepository cycleRepository;
+    private final RotationPayoutOffsetRepository offsetRepository;
+    private final rw.terimbere.csams.modules.contribution.repository.ContributionRepository contributionRepository;
+    private final rw.terimbere.csams.modules.contribution.service.ContributionService contributionService;
+    private final java.time.Clock clock;
 
     // ------------------------------------------------------------------ request
 
@@ -94,6 +100,12 @@ public class RotationPayoutService {
         UserPrincipal actor = requireStaff(cooperativeId);
         requireRotationModel(cooperativeId);
         String key = StringUtils.hasText(idempotencyKey) ? idempotencyKey.trim() : null;
+        if (request.getRotationTurnId() != null) {
+            return requestTurn(cooperativeId, request, key, actor, http);
+        }
+        if (request.getRotationPeriodId() == null) {
+            throw new BusinessException("PAYOUT_TARGET_REQUIRED", "Name the rotation period or the turn to pay");
+        }
         if (key != null) {
             RotationPayout existing = payoutRepository
                     .findByCooperativeIdAndRequestedByAndIdempotencyKey(cooperativeId, actor.getId(), key)
@@ -110,6 +122,9 @@ public class RotationPayoutService {
         RotationPeriod period = periodRepository
                 .findByIdAndCooperativeId(request.getRotationPeriodId(), cooperativeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rotation period", request.getRotationPeriodId()));
+        if (entitlementService.sharePeriodIds(cooperativeId).contains(period.getId())) {
+            throw new BusinessException("ROTATION_PAY_BY_TURN", "This cycle pays by share: request the payout of a turn");
+        }
         if (period.getStatus() != RotationPeriodStatus.SCHEDULED) {
             throw new BusinessException(
                     "ROTATION_PERIOD_NOT_PAYABLE",
@@ -172,6 +187,216 @@ public class RotationPayoutService {
         recordEvent(saved, actor, null, RotationPayoutStatus.REQUESTED, null);
         audit(actor, saved, AuditableAction.ROTATION_PAYOUT_REQUEST, null, http);
         return toResponse(saved);
+    }
+
+    // ------------------------------------------------------------------ share-based turns
+
+    private PayoutResponse requestTurn(
+            UUID cooperativeId, RequestPayout request, String key, UserPrincipal actor, HttpServletRequest http) {
+        if (key != null) {
+            RotationPayout existing = payoutRepository
+                    .findByCooperativeIdAndRequestedByAndIdempotencyKey(cooperativeId, actor.getId(), key)
+                    .orElse(null);
+            if (existing != null) {
+                if (!request.getRotationTurnId().equals(existing.getRotationTurnId())) {
+                    throw new ConflictException("IDEMPOTENCY_KEY_REUSED", "This key was already used for a different payout");
+                }
+                return toResponse(existing);
+            }
+        }
+        fundLockService.lockSchemeFund(cooperativeId);
+        var turn = turnRepository.findByIdAndCooperativeId(request.getRotationTurnId(), cooperativeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Rotation turn", request.getRotationTurnId()));
+        String blocked = turnBlockedReason(cooperativeId, turn, actor);
+        if (blocked != null) {
+            throw new BusinessException(blocked, turnBlockedMessage(blocked));
+        }
+        BigDecimal outstanding = turnOutstanding(cooperativeId, turn, BigDecimal.ZERO);
+        BigDecimal pool = poolService.sharePool(cooperativeId).available();
+        BigDecimal arrears = memberArrears(cooperativeId, turn.getMemberUserId());
+        BigDecimal available = availableFunds(cooperativeId);
+        BigDecimal ceiling = outstanding.min(pool);
+        BigDecimal amount = request.getAmount() == null ? ceiling : MoneyUtils.scaleForStorage(request.getAmount());
+        if (amount.signum() <= 0) {
+            throw new BusinessException("NO_ENTITLEMENT", "The rotation pool has nothing to pay this turn yet");
+        }
+        if (amount.compareTo(outstanding) > 0) {
+            throw new BusinessException("PAYOUT_EXCEEDS_ENTITLEMENT", "This turn has only " + outstanding.toPlainString() + " left to pay");
+        }
+        if (amount.compareTo(pool) > 0) {
+            throw new BusinessException("PAYOUT_EXCEEDS_POOL", "The rotation pool holds only " + pool.toPlainString() + " right now");
+        }
+        BigDecimal netted = arrears.min(amount);
+        if (amount.subtract(netted).compareTo(available) > 0) {
+            throw new BusinessException("PAYOUT_EXCEEDS_AVAILABLE", "A payout cannot exceed the scheme's available funds of " + available.toPlainString());
+        }
+        RotationPayout saved = payoutRepository.saveAndFlush(RotationPayout.builder()
+                .cooperativeId(cooperativeId)
+                .rotationPeriodId(turn.getRotationPeriodId())
+                .rotationTurnId(turn.getId())
+                .recipientUserId(turn.getMemberUserId())
+                .amount(amount)
+                .arrearsNetted(MoneyUtils.scaleForStorage(netted))
+                .entitlementAtRequest(outstanding)
+                .availableAtRequest(available)
+                .status(RotationPayoutStatus.REQUESTED)
+                .idempotencyKey(key)
+                .notes(trim(request.getNotes()))
+                .requestedBy(actor.getId())
+                .requestedAt(Instant.now())
+                .openKey(turn.getId())
+                .build());
+        recordEvent(saved, actor, null, RotationPayoutStatus.REQUESTED, null);
+        audit(actor, saved, AuditableAction.ROTATION_PAYOUT_REQUEST, null, http);
+        return toResponse(saved);
+    }
+
+    /** Null when a payout may be requested for the turn now, else a stable reason code. */
+    private String turnBlockedReason(UUID cooperativeId, rw.terimbere.csams.modules.rotation.entity.RotationTurn turn, UserPrincipal actor) {
+        var cycle = cycleRepository.findByIdAndCooperativeId(turn.getCycleId(), cooperativeId).orElse(null);
+        RotationPeriod period = periodRepository.findByIdAndCooperativeId(turn.getRotationPeriodId(), cooperativeId).orElse(null);
+        if (cycle == null || period == null
+                || cycle.getStatus() != rw.terimbere.csams.modules.rotation.entity.RotationCycleStatus.ACTIVE
+                || period.getStatus() != RotationPeriodStatus.SCHEDULED) {
+            return "PERIOD_NOT_PAYABLE";
+        }
+        if (java.time.YearMonth.of(period.getPeriodYear(), period.getPeriodMonth())
+                .isAfter(java.time.YearMonth.now(clock.withZone(KIGALI)))) {
+            return "TURN_NOT_DUE";
+        }
+        if (actor.getId().equals(turn.getMemberUserId())) {
+            return "RECIPIENT_CANNOT_REQUEST_OWN";
+        }
+        if (!isActiveMember(cooperativeId, turn.getMemberUserId())) {
+            return "RECIPIENT_NOT_ACTIVE";
+        }
+        if (payoutRepository.sumAmountForTurn(cooperativeId, turn.getId(), EnumSet.of(RotationPayoutStatus.REQUESTED, RotationPayoutStatus.APPROVED)).signum() > 0) {
+            return "PAYOUT_ALREADY_OPEN";
+        }
+        if (turnOutstanding(cooperativeId, turn, BigDecimal.ZERO).signum() <= 0) {
+            return "PAYOUT_ALREADY_COMPLETED";
+        }
+        return null;
+    }
+
+    private static String turnBlockedMessage(String code) {
+        return switch (code) {
+            case "PERIOD_NOT_PAYABLE" -> "This turn belongs to a cycle that is not active";
+            case "TURN_NOT_DUE" -> "This turn's month has not begun yet";
+            case "RECIPIENT_CANNOT_REQUEST_OWN" -> "A recipient cannot request their own payout";
+            case "RECIPIENT_NOT_ACTIVE" -> "The member of this turn is not an active member";
+            case "PAYOUT_ALREADY_OPEN" -> "This turn already has a payout awaiting approval or disbursement";
+            case "PAYOUT_ALREADY_COMPLETED" -> "This turn was already paid in full";
+            default -> "A payout cannot be requested for this turn now";
+        };
+    }
+
+    /** What the turn still pays: payout less received before migration, disbursed, and committed (except {@code ownCommit}). */
+    private BigDecimal turnOutstanding(UUID cooperativeId, rw.terimbere.csams.modules.rotation.entity.RotationTurn turn, BigDecimal ownCommit) {
+        BigDecimal disbursed = payoutRepository.sumAmountForTurn(cooperativeId, turn.getId(), EnumSet.of(RotationPayoutStatus.DISBURSED));
+        BigDecimal open = payoutRepository.sumAmountForTurn(cooperativeId, turn.getId(), EnumSet.of(RotationPayoutStatus.REQUESTED, RotationPayoutStatus.APPROVED))
+                .subtract(ownCommit);
+        return MoneyUtils.scaleForStorage(turn.getPayoutAmount()
+                .subtract(turn.getOpeningReceivedAmount())
+                .subtract(disbursed)
+                .subtract(open)
+                .max(BigDecimal.ZERO));
+    }
+
+    /** The member's unpaid contributions whose due date has passed (never loans or fines). */
+    private BigDecimal memberArrears(UUID cooperativeId, UUID memberUserId) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (var row : overdueRows(cooperativeId, memberUserId)) {
+            total = total.add(row.getOutstandingAmount());
+        }
+        return MoneyUtils.scaleForStorage(total);
+    }
+
+    private List<rw.terimbere.csams.modules.contribution.entity.Contribution> overdueRows(UUID cooperativeId, UUID memberUserId) {
+        LocalDate today = LocalDate.now(clock.withZone(KIGALI));
+        List<rw.terimbere.csams.modules.contribution.entity.Contribution> rows = new ArrayList<>();
+        for (var row : contributionRepository.findByCooperativeIdAndMemberUserIdOrderByYearDescMonthDesc(cooperativeId, memberUserId)) {
+            if (row.getStatus() == rw.terimbere.csams.modules.contribution.entity.ContributionStatus.WAIVED
+                    || row.getStatus() == rw.terimbere.csams.modules.contribution.entity.ContributionStatus.CANCELLED) {
+                continue;
+            }
+            if (row.getOutstandingAmount() == null || row.getOutstandingAmount().signum() <= 0) {
+                continue;
+            }
+            LocalDate due = row.getDueDate() != null ? row.getDueDate()
+                    : java.time.YearMonth.of(row.getYear(), row.getMonth()).plusMonths(1).atDay(10);
+            if (due.isBefore(today)) {
+                rows.add(row);
+            }
+        }
+        rows.sort(java.util.Comparator.comparingInt(rw.terimbere.csams.modules.contribution.entity.Contribution::getYear)
+                .thenComparingInt(rw.terimbere.csams.modules.contribution.entity.Contribution::getMonth));
+        return rows;
+    }
+
+    /** Applies the netted part of a disbursed turn payout to the recipient's overdue contributions, oldest first. */
+    private BigDecimal applyNetting(RotationPayout payout, UserPrincipal actor, String reference, String currency) {
+        BigDecimal left = payout.getArrearsNetted();
+        BigDecimal applied = BigDecimal.ZERO;
+        LocalDate today = LocalDate.now(clock.withZone(KIGALI));
+        for (var row : overdueRows(payout.getCooperativeId(), payout.getRecipientUserId())) {
+            if (left.signum() <= 0) {
+                break;
+            }
+            var locked = contributionRepository.findByIdAndCooperativeIdForUpdate(row.getId(), payout.getCooperativeId()).orElse(null);
+            if (locked == null || locked.getOutstandingAmount() == null || locked.getOutstandingAmount().signum() <= 0) {
+                continue;
+            }
+            BigDecimal x = MoneyUtils.scaleForStorage(left.min(locked.getOutstandingAmount()));
+            contributionService.applyVerifiedPayment(locked, x, today, reference, actor.getId(), currency);
+            offsetRepository.save(RotationPayoutOffset.builder()
+                    .cooperativeId(payout.getCooperativeId())
+                    .payoutId(payout.getId())
+                    .contributionId(locked.getId())
+                    .rotationPeriodId(locked.getRotationPeriodId())
+                    .amount(x)
+                    .build());
+            left = left.subtract(x);
+            applied = applied.add(x);
+        }
+        return MoneyUtils.scaleForStorage(applied);
+    }
+
+    /** Turns of share-based cycles and whether each can be paid now (for the officer's payout screen). */
+    @Transactional(readOnly = true)
+    public List<RotationPayoutDtos.TurnPayoutEligibility> turnEligibility(UUID cooperativeId) {
+        UserPrincipal actor = requireStaffAny(cooperativeId);
+        requireRotationModel(cooperativeId);
+        boolean authorized = actor.hasRole(CooperativeAuthorizationService.SUPER_ADMIN) || actor.hasAuthority(PAYOUT_WRITE);
+        BigDecimal pool = poolService.sharePool(cooperativeId).available();
+        Map<UUID, RotationPeriod> periods = new HashMap<>();
+        periodRepository.findByCooperativeIdOrderByPeriodYearAscPeriodMonthAsc(cooperativeId).forEach(p -> periods.put(p.getId(), p));
+        Map<UUID, BigDecimal> arrearsCache = new HashMap<>();
+        Map<UUID, String> names = new HashMap<>();
+        List<RotationPayoutDtos.TurnPayoutEligibility> result = new ArrayList<>();
+        for (var turn : turnRepository.findByCooperativeId(cooperativeId)) {
+            RotationPeriod period = periods.get(turn.getRotationPeriodId());
+            if (period == null) {
+                continue;
+            }
+            String reason = authorized ? turnBlockedReason(cooperativeId, turn, actor) : "NOT_AUTHORIZED";
+            BigDecimal outstanding = turnOutstanding(cooperativeId, turn, BigDecimal.ZERO);
+            BigDecimal arrears = arrearsCache.computeIfAbsent(turn.getMemberUserId(), m -> memberArrears(cooperativeId, m));
+            if (reason == null && pool.signum() <= 0) {
+                reason = "NO_COLLECTED_FUNDS";
+            }
+            String name = names.computeIfAbsent(turn.getMemberUserId(), m -> userRepository.findById(m).map(User::getFullName).orElse(""));
+            result.add(new RotationPayoutDtos.TurnPayoutEligibility(
+                    turn.getId(), period.getId(), period.getPeriodYear(), period.getPeriodMonth(),
+                    turn.getMemberUserId(), name, turn.getShareCount(),
+                    MoneyUtils.scaleForStorage(turn.getPayoutAmount()), outstanding, arrears,
+                    reason == null, reason,
+                    reason == null ? outstanding.min(pool) : MoneyUtils.scaleForStorage(BigDecimal.ZERO)));
+        }
+        result.sort(java.util.Comparator.comparingInt(RotationPayoutDtos.TurnPayoutEligibility::periodYear)
+                .thenComparingInt(RotationPayoutDtos.TurnPayoutEligibility::periodMonth)
+                .thenComparing(RotationPayoutDtos.TurnPayoutEligibility::memberName));
+        return result;
     }
 
     // ------------------------------------------------------------------ approve / reject / cancel
@@ -299,6 +524,9 @@ public class RotationPayoutService {
                 .idempotencyKey(LedgerService.rotationPayoutKey(payout.getId()))
                 .build());
 
+        if (payout.getRotationTurnId() != null && payout.getArrearsNetted().signum() > 0) {
+            payout.setArrearsNetted(applyNetting(payout, actor, reference, cooperative.getCurrency()));
+        }
         RotationPayoutStatus previous = payout.getStatus();
         payout.setStatus(RotationPayoutStatus.DISBURSED);
         payout.setDisbursedBy(actor.getId());
@@ -389,6 +617,28 @@ public class RotationPayoutService {
     /** The collected entitlement and the available funds must still cover the payout; never trust request-time numbers. */
     private void requireStillCovered(RotationPayout payout) {
         UUID cooperativeId = payout.getCooperativeId();
+        if (payout.getRotationTurnId() != null) {
+            var turn = turnRepository.findByIdAndCooperativeId(payout.getRotationTurnId(), cooperativeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Rotation turn", payout.getRotationTurnId()));
+            BigDecimal outstanding = turnOutstanding(cooperativeId, turn, payout.getAmount());
+            if (payout.getAmount().compareTo(outstanding) > 0) {
+                throw new BusinessException("PAYOUT_EXCEEDS_ENTITLEMENT", "This turn now has only " + outstanding.toPlainString() + " left to pay");
+            }
+            // The pool already counts this payout as committed; add it back to see whether the pool still covers it.
+            BigDecimal pool = poolService.sharePool(cooperativeId).available().add(payout.getAmount());
+            if (payout.getAmount().compareTo(pool) > 0) {
+                throw new BusinessException("PAYOUT_EXCEEDS_POOL", "The rotation pool now holds only " + pool.toPlainString());
+            }
+            BigDecimal netted = memberArrears(cooperativeId, payout.getRecipientUserId()).min(payout.getAmount());
+            payout.setArrearsNetted(MoneyUtils.scaleForStorage(netted));
+            BigDecimal available = availableFunds(cooperativeId);
+            if (payout.getAmount().subtract(netted).compareTo(available) > 0) {
+                throw new BusinessException(
+                        "PAYOUT_EXCEEDS_AVAILABLE",
+                        "The scheme's available funds are now " + available.max(BigDecimal.ZERO).toPlainString() + ", less than this payout");
+            }
+            return;
+        }
         // Only rotating money whose receipt was verified can be paid out (never expected or unreconciled amounts).
         // plus the reserve cover of the period's shortfall (opening pool and top-ups), recomputed from the data as it is now
         BigDecimal ceiling = poolService.payoutCeiling(cooperativeId, payout.getRotationPeriodId());
@@ -477,8 +727,12 @@ public class RotationPayoutService {
         Map<UUID, PeriodEntitlement> entitlements = new HashMap<>();
         entitlementService.overview(cooperativeId).forEach(e -> entitlements.put(e.periodId(), e));
         BigDecimal available = availableFunds(cooperativeId);
+        java.util.Set<UUID> share = entitlementService.sharePeriodIds(cooperativeId);
         List<RotationPayoutDtos.PeriodPayoutEligibility> result = new ArrayList<>();
         for (RotationPeriod period : periodRepository.findByCooperativeIdOrderByPeriodYearAscPeriodMonthAsc(cooperativeId)) {
+            if (share.contains(period.getId())) {
+                continue; // paid by turn: see turnEligibility
+            }
             PeriodEntitlement e = entitlements.get(period.getId());
             BigDecimal distributed = e == null ? BigDecimal.ZERO : e.distributed();
             BigDecimal headroom = MoneyUtils.scaleForStorage(ceilings.getOrDefault(period.getId(), BigDecimal.ZERO).subtract(distributed));
@@ -585,7 +839,10 @@ public class RotationPayoutService {
                 p.getDisbursementMethod(),
                 p.getDisbursementReference(),
                 p.getDisbursementNote(),
-                actionsFor(p));
+                actionsFor(p),
+                p.getRotationTurnId(),
+                MoneyUtils.scaleForStorage(p.getArrearsNetted()),
+                MoneyUtils.scaleForStorage(p.getAmount().subtract(p.getArrearsNetted())));
     }
 
     private static String requireReason(String reason) {

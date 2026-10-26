@@ -135,6 +135,14 @@ public class RotationPayoutController {
         return ResponseEntity.ok(ApiResponse.ok(payoutService.eligibility(cooperativeId)));
     }
 
+    @GetMapping("/payouts/turn-eligibility")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Turns of share-based cycles: what each still pays, the member's arrears netted, and whether it can be paid now")
+    public ResponseEntity<ApiResponse<List<RotationPayoutDtos.TurnPayoutEligibility>>> turnEligibility(
+            @PathVariable UUID cooperativeId) {
+        return ResponseEntity.ok(ApiResponse.ok(payoutService.turnEligibility(cooperativeId)));
+    }
+
     @GetMapping("/payouts")
     @PreAuthorize("hasAuthority('PAYOUT_WRITE')")
     @Operation(summary = "All rotation payouts of the scheme (officers)")
