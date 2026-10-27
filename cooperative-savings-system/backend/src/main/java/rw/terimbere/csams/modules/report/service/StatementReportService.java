@@ -43,14 +43,14 @@ public class StatementReportService {
         LocalDate asAt = request.getToDate() == null ? LocalDate.now(ReportTimelineValidator.ZONE) : request.getToDate();
         return switch (type) {
             case MEMBER_STATEMENT -> memberStatement(cooperativeId, request, asAt);
-            case RECONCILIATION -> List.of(reconciliation(cooperativeId));
+            case RECONCILIATION -> List.of(reconciliation(cooperativeId, asAt));
             case COLLECTION_BY_MONTH -> List.of(collectionByMonth(cooperativeId, request, asAt));
-            case ROTATION_SCHEDULE -> rotationSchedule(cooperativeId);
-            case MEMBER_POSITIONS -> List.of(memberPositions(cooperativeId));
+            case ROTATION_SCHEDULE -> rotationSchedule(cooperativeId, asAt);
+            case MEMBER_POSITIONS -> List.of(memberPositions(cooperativeId, asAt));
             case ARREARS_AND_PENALTIES -> List.of(arrears(cooperativeId, asAt));
             case LOAN_BOOK -> loanBook(cooperativeId, asAt);
             case INCOME_AND_EXPENSES -> List.of(incomeAndExpenses(cooperativeId, request, asAt));
-            case YEAR_END_CLOSE -> yearEndClose(cooperativeId);
+            case YEAR_END_CLOSE -> yearEndClose(cooperativeId, asAt);
             default -> throw new ValidationException("Not a statement report: " + type);
         };
     }
@@ -62,7 +62,7 @@ public class StatementReportService {
         if (member == null) {
             throw new ValidationException("Choose the member whose statement to export");
         }
-        MemberPositionService.SchemePosition scheme = positionService.compute(cooperativeId);
+        MemberPositionService.SchemePosition scheme = positionService.compute(cooperativeId, asAt);
         MemberPositionService.MemberPosition p = scheme.members().stream()
                 .filter(m -> m.memberUserId().equals(member)).findFirst()
                 .orElseThrow(() -> new ValidationException("This member has no position in the scheme"));
@@ -71,11 +71,11 @@ public class StatementReportService {
         int turnsAhead = 0;
         for (Map<String, Object> t : jdbc.queryForList(
                 "select t.id, p.period_year, p.period_month, t.share_count, t.payout_amount, t.opening_received_amount, t.opening_received_date,"
-                        + " (select coalesce(sum(r.amount), 0) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED') as paid,"
-                        + " (select max(r.disbursed_at) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED') as paid_at"
+                        + " (select coalesce(sum(r.amount), 0) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED' and r.disbursed_at < ?) as paid,"
+                        + " (select max(r.disbursed_at) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED' and r.disbursed_at < ?) as paid_at"
                         + " from rotation_turns t join rotation_periods p on p.id = t.rotation_period_id join rotation_cycles c on c.id = t.cycle_id"
                         + " where t.cooperative_id = ? and t.member_user_id = ? and c.status = 'ACTIVE' order by p.period_year, p.period_month",
-                cooperativeId, member)) {
+                endOf(asAt), endOf(asAt), cooperativeId, member)) {
             BigDecimal amount = money(t.get("payout_amount"));
             BigDecimal received = money(t.get("opening_received_amount")).add(money(t.get("paid")));
             String status = received.compareTo(amount) >= 0 ? "Paid" : received.signum() > 0 ? "Partly paid" : "Upcoming";
@@ -167,9 +167,12 @@ public class StatementReportService {
 
     // ------------------------------------------------------------------ officer reports
 
-    private ReportSheetData reconciliation(UUID cooperativeId) {
-        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId);
-        BigDecimal loans = scalar("select coalesce(sum(outstanding_principal), 0) from loans where cooperative_id = ? and status in ('ACTIVE','OVERDUE')", cooperativeId);
+    private ReportSheetData reconciliation(UUID cooperativeId, LocalDate asAt) {
+        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId, asAt);
+        BigDecimal loans = scalar("select coalesce(sum(l.outstanding_principal + coalesce((select sum(r.principal_portion) from loan_repayments r"
+                + " where r.loan_id = l.id and r.reversed_at is null and r.payment_date > ?), 0)), 0) from loans l where l.cooperative_id = ?"
+                + " and l.status in ('ACTIVE','OVERDUE','CLOSED') and l.disbursement_date <= ?",
+                Date.valueOf(asAt), cooperativeId, Date.valueOf(asAt));
         BigDecimal investments = s.actualAssets().subtract(s.availableFunds()).subtract(loans);
         BigDecimal unclassified = s.members().stream().map(MemberPositionService.MemberPosition::unclassifiedPaid).reduce(BigDecimal.ZERO, BigDecimal::add);
         List<List<Object>> rows = new ArrayList<>();
@@ -186,7 +189,7 @@ public class StatementReportService {
         rows.add(cells("Payments not yet split between capital and rotation", m(unclassified)));
         rows.add(cells("Total owed to members", s.expectedAssets()));
         rows.add(cells("DIFFERENCE (held - owed): zero when every franc is explained", s.unexplainedDifference()));
-        return sheet("Reconciliation as at " + LocalDate.now(ReportTimelineValidator.ZONE), List.of("Item", "Amount"), rows, null);
+        return sheet("Reconciliation as at " + asAt, List.of("Item", "Amount"), rows, null);
     }
 
     private ReportSheetData collectionByMonth(UUID cooperativeId, ReportExportRequest request, LocalDate asAt) {
@@ -238,18 +241,18 @@ public class StatementReportService {
                 cells("Total", null, m(sum[0]), m(sum[1]), m(sum[2]), m(sum[3]), m(sum[4]), m(sum[5]), m(sum[6])));
     }
 
-    private List<ReportSheetData> rotationSchedule(UUID cooperativeId) {
+    private List<ReportSheetData> rotationSchedule(UUID cooperativeId, LocalDate asAt) {
         List<List<Object>> rows = new ArrayList<>();
         String next = null;
         for (Map<String, Object> t : jdbc.queryForList(
                 "select p.period_year, p.period_month, u.first_name, u.last_name, t.share_count, t.payout_amount, t.opening_received_amount,"
-                        + " (select coalesce(sum(r.amount), 0) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED') as paid,"
-                        + " (select max(r.disbursed_at) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED') as paid_at,"
+                        + " (select coalesce(sum(r.amount), 0) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED' and r.disbursed_at < ?) as paid,"
+                        + " (select max(r.disbursed_at) from rotation_payouts r where r.rotation_turn_id = t.id and r.status = 'DISBURSED' and r.disbursed_at < ?) as paid_at,"
                         + " t.opening_received_date"
                         + " from rotation_turns t join rotation_periods p on p.id = t.rotation_period_id join rotation_cycles c on c.id = t.cycle_id"
                         + " join users u on u.id = t.member_user_id where t.cooperative_id = ? and c.status = 'ACTIVE'"
                         + " order by p.period_year, p.period_month, u.first_name, u.last_name",
-                cooperativeId)) {
+                endOf(asAt), endOf(asAt), cooperativeId)) {
             BigDecimal amount = money(t.get("payout_amount"));
             BigDecimal received = money(t.get("opening_received_amount")).add(money(t.get("paid")));
             String name = (nzs(t.get("first_name")) + " " + nzs(t.get("last_name"))).trim();
@@ -263,7 +266,7 @@ public class StatementReportService {
             Object date = t.get("paid_at") != null ? instant(t.get("paid_at")) : date(t.get("opening_received_date"));
             rows.add(cells(month, name, num(t.get("share_count")), m(amount), m(received), status, date));
         }
-        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId);
+        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId, asAt);
         List<List<Object>> summary = new ArrayList<>();
         summary.add(cells("Next to be paid", next == null ? "Cycle complete" : next));
         summary.add(cells("Rotation money held for members (pool)", s.totalRotationPosition()));
@@ -272,8 +275,8 @@ public class StatementReportService {
                 sheet("Rotation schedule", List.of("Month", "Member", "Shares", "Turn amount", "Received", "Status", "Date"), rows, null));
     }
 
-    private ReportSheetData memberPositions(UUID cooperativeId) {
-        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId);
+    private ReportSheetData memberPositions(UUID cooperativeId, LocalDate asAt) {
+        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId, asAt);
         List<List<Object>> rows = new ArrayList<>();
         BigDecimal[] t = zeros(8);
         int shares = 0;
@@ -287,7 +290,7 @@ public class StatementReportService {
                 t[i] = t[i].add(v[i]);
             }
         }
-        return sheet("Member positions as at " + LocalDate.now(ReportTimelineValidator.ZONE),
+        return sheet("Member positions as at " + asAt,
                 List.of("Member", "Shares", "Capital", "Income share", "Rotation position", "Owed to member", "Loans", "Fines",
                         "Overdue contributions", "Net position"),
                 rows, cells("Total", shares, m(t[0]), m(t[1]), m(t[2]), m(t[3]), m(t[4]), m(t[5]), m(t[6]), m(t[7])));
@@ -401,8 +404,8 @@ public class StatementReportService {
         return sheet("Income and expenses", List.of("Item", "Income", "Expense"), rows, null);
     }
 
-    private List<ReportSheetData> yearEndClose(UUID cooperativeId) {
-        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId);
+    private List<ReportSheetData> yearEndClose(UUID cooperativeId, LocalDate asAt) {
+        MemberPositionService.SchemePosition s = positionService.compute(cooperativeId, asAt);
         BigDecimal value = s.totalShares() == 0 ? BigDecimal.ZERO
                 : s.totalCapital().add(s.incomePool()).divide(BigDecimal.valueOf(s.totalShares()), 2, RoundingMode.HALF_UP);
         List<List<Object>> summary = new ArrayList<>();
@@ -424,7 +427,7 @@ public class StatementReportService {
             }
         }
         return List.of(
-                sheet("Year-end close as at " + LocalDate.now(ReportTimelineValidator.ZONE), List.of("Item", "Amount"), summary, null),
+                sheet("Year-end close as at " + asAt, List.of("Item", "Amount"), summary, null),
                 sheet("Share-out by member", List.of("Member", "Shares", "Capital", "Income share", "Capital + income",
                         "Rotation still owed (+) or advanced (-)", "Less loans", "Less fines", "Net payable if shared out now"),
                         rows, cells("Total", s.totalShares(), m(t[0]), m(t[1]), m(t[2]), m(t[3]), m(t[4]), m(t[5]), m(t[6]))));
@@ -449,6 +452,11 @@ public class StatementReportService {
         BigDecimal[] a = new BigDecimal[n];
         java.util.Arrays.fill(a, BigDecimal.ZERO);
         return a;
+    }
+
+    /** The first instant after the day, in Kigali time. */
+    private static java.sql.Timestamp endOf(LocalDate day) {
+        return java.sql.Timestamp.from(day.plusDays(1).atStartOfDay(ReportTimelineValidator.ZONE).toInstant());
     }
 
     private static String month(Object year, Object month) {

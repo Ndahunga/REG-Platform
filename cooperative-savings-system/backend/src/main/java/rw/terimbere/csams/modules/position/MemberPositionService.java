@@ -142,11 +142,39 @@ public class MemberPositionService {
     /** No authorization: for reports and exports whose callers already checked access. */
     @Transactional(readOnly = true)
     public SchemePosition compute(UUID cooperativeId) {
+        return compute(cooperativeId, null);
+    }
+
+    /**
+     * Positions as they stood at the end of {@code asAt} (Kigali time): what was paid, received, lent, repaid and fined up
+     * to that day. {@code null} or today gives the current positions.
+     */
+    @Transactional(readOnly = true)
+    public SchemePosition compute(UUID cooperativeId, java.time.LocalDate asAt) {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Africa/Kigali"));
+        java.time.LocalDate at = asAt == null || !asAt.isBefore(today) ? null : asAt;
+        java.sql.Date day = at == null ? null : java.sql.Date.valueOf(at);
+        java.sql.Timestamp end = at == null ? null
+                : java.sql.Timestamp.from(at.plusDays(1).atStartOfDay(java.time.ZoneId.of("Africa/Kigali")).toInstant());
         Cooperative cooperative = cooperativeRepository.findByIdAndDeletedFalse(cooperativeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cooperative", cooperativeId));
         Map<UUID, Integer> shares = new HashMap<>();
         for (CooperativeMembership m : membershipRepository.findByCooperativeIdAndMembershipStatus(cooperativeId, "ACTIVE")) {
+            if (at != null && m.getMembershipDate() != null && m.getMembershipDate().isAfter(at)) {
+                continue; // joined after the date
+            }
             shares.put(m.getUserId(), m.getShareCount() == null ? 0 : m.getShareCount());
+        }
+        if (at != null) {
+            // Shares bought after the date were not held yet.
+            jdbc.query("select member_user_id, coalesce(sum(number_of_shares),0) from share_purchases where cooperative_id = ?"
+                            + " and status = 'APPROVED' and reviewed_at >= ? group by member_user_id",
+                    rs -> {
+                        UUID id = (UUID) rs.getObject(1);
+                        if (shares.containsKey(id)) {
+                            shares.put(id, Math.max(0, shares.get(id) - rs.getInt(2)));
+                        }
+                    }, cooperativeId, end);
         }
         Map<UUID, MemberOpeningBalance> opening = new HashMap<>();
         openingRepository.findByCooperativeId(cooperativeId).forEach(o -> opening.put(o.getMemberUserId(), o));
@@ -155,6 +183,9 @@ public class MemberPositionService {
         Map<UUID, BigDecimal> rotated = new HashMap<>();
         Map<UUID, BigDecimal> unclassified = new HashMap<>();
         for (Contribution row : contributionRepository.findPaid(cooperativeId)) {
+            if (at != null && row.getPaymentDate() != null && row.getPaymentDate().isAfter(at)) {
+                continue; // paid after the date
+            }
             var split = ContributionService.ledgerSplit(row);
             if (split == null) {
                 unclassified.merge(row.getMemberUserId(), row.getPaidAmount(), BigDecimal::add);
@@ -164,32 +195,62 @@ public class MemberPositionService {
             }
         }
         Map<UUID, BigDecimal> received = new HashMap<>();
-        for (Object[] r : rotationPayoutRepository.sumAmountByRecipient(cooperativeId, EnumSet.of(RotationPayoutStatus.DISBURSED))) {
-            received.put((UUID) r[0], (BigDecimal) r[1]);
+        if (at == null) {
+            for (Object[] r : rotationPayoutRepository.sumAmountByRecipient(cooperativeId, EnumSet.of(RotationPayoutStatus.DISBURSED))) {
+                received.put((UUID) r[0], (BigDecimal) r[1]);
+            }
+        } else {
+            received = byMember("select recipient_user_id, coalesce(sum(amount),0) from rotation_payouts where cooperative_id = ?"
+                    + " and status = 'DISBURSED' and disbursed_at < ? group by recipient_user_id", cooperativeId, end);
         }
         Map<UUID, BigDecimal> openingTurnReceived = byMember(
                 "select member_user_id, coalesce(sum(opening_received_amount),0) from rotation_turns where cooperative_id = ? group by member_user_id",
                 cooperativeId);
-        Map<UUID, BigDecimal> purchases = byMember(
-                "select member_user_id, coalesce(sum(total_amount),0) from share_purchases where cooperative_id = ? and status = 'APPROVED' group by member_user_id",
-                cooperativeId);
-        Map<UUID, BigDecimal> shareOut = byMember(
-                "select member_user_id, coalesce(sum(payout_amount),0) from payout_lines where cooperative_id = ? and status = 'PAID' group by member_user_id",
-                cooperativeId);
-        Map<UUID, BigDecimal> loans = byMember(
-                "select member_user_id, coalesce(sum(outstanding_principal + outstanding_interest),0) from loans where cooperative_id = ?"
-                        + " and status in ('ACTIVE','OVERDUE') group by member_user_id",
-                cooperativeId);
-        Map<UUID, BigDecimal> fines = byMember(
-                "select member_user_id, coalesce(sum(outstanding_amount),0) from fines where cooperative_id = ?"
-                        + " and status in ('UNPAID','PARTIALLY_PAID') group by member_user_id",
-                cooperativeId);
-        Map<UUID, BigDecimal> arrears = byMember(
-                "select member_user_id, coalesce(sum(outstanding_amount),0) from contributions where cooperative_id = ?"
-                        + " and status not in ('WAIVED','CANCELLED') and outstanding_amount > 0 and due_date < current_date group by member_user_id",
-                cooperativeId);
+        Map<UUID, BigDecimal> purchases;
+        Map<UUID, BigDecimal> shareOut;
+        Map<UUID, BigDecimal> loans;
+        Map<UUID, BigDecimal> fines;
+        Map<UUID, BigDecimal> arrears;
+        if (at == null) {
+            purchases = byMember(
+                    "select member_user_id, coalesce(sum(total_amount),0) from share_purchases where cooperative_id = ? and status = 'APPROVED' group by member_user_id",
+                    cooperativeId);
+            shareOut = byMember(
+                    "select member_user_id, coalesce(sum(payout_amount),0) from payout_lines where cooperative_id = ? and status = 'PAID' group by member_user_id",
+                    cooperativeId);
+            loans = byMember(
+                    "select member_user_id, coalesce(sum(outstanding_principal + outstanding_interest),0) from loans where cooperative_id = ?"
+                            + " and status in ('ACTIVE','OVERDUE') group by member_user_id",
+                    cooperativeId);
+            fines = byMember(
+                    "select member_user_id, coalesce(sum(outstanding_amount),0) from fines where cooperative_id = ?"
+                            + " and status in ('UNPAID','PARTIALLY_PAID') group by member_user_id",
+                    cooperativeId);
+            arrears = byMember(
+                    "select member_user_id, coalesce(sum(outstanding_amount),0) from contributions where cooperative_id = ?"
+                            + " and status not in ('WAIVED','CANCELLED') and outstanding_amount > 0 and due_date < current_date group by member_user_id",
+                    cooperativeId);
+        } else {
+            purchases = byMember("select member_user_id, coalesce(sum(total_amount),0) from share_purchases where cooperative_id = ?"
+                    + " and status = 'APPROVED' and reviewed_at < ? group by member_user_id", cooperativeId, end);
+            shareOut = byMember("select l.member_user_id, coalesce(sum(l.payout_amount),0) from payout_lines l join payout_runs r on r.id = l.payout_run_id"
+                    + " where l.cooperative_id = ? and l.status = 'PAID' and r.paid_at < ? group by l.member_user_id", cooperativeId, end);
+            // What is owed today plus what was repaid after the date, on loans already given out by then.
+            loans = byMember("select l.member_user_id, coalesce(sum(l.outstanding_principal + l.outstanding_interest"
+                    + " + coalesce((select sum(r.principal_portion + r.interest_portion) from loan_repayments r"
+                    + "   where r.loan_id = l.id and r.reversed_at is null and r.payment_date > ?), 0)), 0)"
+                    + " from loans l where l.cooperative_id = ? and l.status in ('ACTIVE','OVERDUE','CLOSED') and l.disbursement_date <= ?"
+                    + " group by l.member_user_id", day, cooperativeId, day);
+            fines = byMember("select f.member_user_id, coalesce(sum(f.outstanding_amount"
+                    + " + coalesce((select sum(p.amount) from fine_payments p where p.fine_id = f.id and p.status = 'APPROVED' and p.payment_date > ?), 0)), 0)"
+                    + " from fines f where f.cooperative_id = ? and f.status in ('UNPAID','PARTIALLY_PAID','PAID') and f.issued_date <= ?"
+                    + " group by f.member_user_id", day, cooperativeId, day);
+            arrears = byMember("select member_user_id, coalesce(sum(outstanding_amount + case when payment_date > ? then paid_amount else 0 end),0)"
+                    + " from contributions where cooperative_id = ? and status not in ('WAIVED','CANCELLED') and due_date < ?"
+                    + " group by member_user_id", day, cooperativeId, day);
+        }
 
-        BigDecimal incomePool = incomePool(cooperativeId);
+        BigDecimal incomePool = at == null ? incomePool(cooperativeId) : incomePoolAt(cooperativeId, day);
         int totalShares = shares.values().stream().mapToInt(Integer::intValue).sum();
         BigDecimal perShare = totalShares == 0 ? BigDecimal.ZERO
                 : incomePool.divide(BigDecimal.valueOf(totalShares), 4, RoundingMode.HALF_UP);
@@ -249,6 +310,22 @@ public class MemberPositionService {
                 "select coalesce(sum(outstanding_principal),0) from loans where cooperative_id = ? and status in ('ACTIVE','OVERDUE')",
                 cooperativeId));
         BigDecimal investments = m(financialService.sumActiveInvestmentCapital(cooperativeId));
+        if (at != null) {
+            // Cash as at the date: today's cash less what came in after it, plus what went out after it.
+            BigDecimal inAfter = ledgerAfter("credit_amount", day, cooperativeId, "REGULAR_CONTRIBUTION", "SPECIAL_CONTRIBUTION",
+                    "FINE_PAYMENT", "OTHER_INCOME", "INVESTMENT_CAPITAL_RETURN", "SHARE_PURCHASE", "LOAN_INTEREST_PAYMENT",
+                    "INVESTMENT_PROFIT", "LOAN_PRINCIPAL_REPAYMENT");
+            BigDecimal outAfter = ledgerAfter("debit_amount", day, cooperativeId, "INTEREST_EXPENSE", "INVESTMENT_OUTFLOW",
+                    "GENERAL_EXPENSE", "MEMBER_PAYOUT", "LOAN_DISBURSEMENT");
+            available = m(available.subtract(inAfter).add(outAfter));
+            loanPrincipalOut = m(scalar("select coalesce(sum(l.outstanding_principal + coalesce((select sum(r.principal_portion)"
+                    + " from loan_repayments r where r.loan_id = l.id and r.reversed_at is null and r.payment_date > ?), 0)), 0)"
+                    + " from loans l where l.cooperative_id = ? and l.status in ('ACTIVE','OVERDUE','CLOSED') and l.disbursement_date <= ?",
+                    day, cooperativeId, day));
+            investments = m(investments
+                    .subtract(ledgerAfter("debit_amount", day, cooperativeId, "INVESTMENT_OUTFLOW"))
+                    .add(ledgerAfter("credit_amount", day, cooperativeId, "INVESTMENT_CAPITAL_RETURN")));
+        }
         BigDecimal actual = available.add(loanPrincipalOut).add(investments);
         // Rotation positions already net the advances, so their sum is the rotated money still held.
         BigDecimal expected = totalCapital.add(incomePool).add(totalRotation).add(totalUnclassified).add(totalOwed);
@@ -281,16 +358,39 @@ public class MemberPositionService {
         return interest.add(fines).add(other).subtract(expenses).add(opening);
     }
 
-    private Map<UUID, BigDecimal> byMember(String sql, UUID cooperativeId) {
+    /** Income realised up to the end of a day, from the ledger: the same items as {@link #incomePool}. */
+    private BigDecimal incomePoolAt(UUID cooperativeId, java.sql.Date day) {
+        BigDecimal credits = scalar("select coalesce(sum(credit_amount),0) from financial_ledger where cooperative_id = ? and status = 'APPROVED'"
+                + " and transaction_date <= ? and transaction_type in ('LOAN_INTEREST_PAYMENT','INVESTMENT_PROFIT','FINE_PAYMENT','OTHER_INCOME')",
+                cooperativeId, day);
+        BigDecimal debits = scalar("select coalesce(sum(debit_amount),0) from financial_ledger where cooperative_id = ? and status = 'APPROVED'"
+                + " and transaction_date <= ? and transaction_type in ('INTEREST_EXPENSE','GENERAL_EXPENSE')", cooperativeId, day);
+        BigDecimal opening = scalar(
+                "select coalesce(sum(unallocated_income),0) from scheme_opening_positions where cooperative_id = ?", cooperativeId);
+        return credits.subtract(debits).add(opening);
+    }
+
+    /** Approved ledger amounts (credit or debit column) of these types dated after a day. */
+    private BigDecimal ledgerAfter(String column, java.sql.Date day, UUID cooperativeId, String... types) {
+        String in = String.join(",", java.util.Collections.nCopies(types.length, "?"));
+        Object[] args = new Object[types.length + 2];
+        args[0] = cooperativeId;
+        args[1] = day;
+        System.arraycopy(types, 0, args, 2, types.length);
+        return scalar("select coalesce(sum(" + column + "),0) from financial_ledger where cooperative_id = ? and status = 'APPROVED'"
+                + " and transaction_date > ? and transaction_type in (" + in + ")", args);
+    }
+
+    private Map<UUID, BigDecimal> byMember(String sql, Object... args) {
         Map<UUID, BigDecimal> result = new HashMap<>();
         jdbc.query(sql, rs -> {
             result.put((UUID) rs.getObject(1), rs.getBigDecimal(2));
-        }, cooperativeId);
+        }, args);
         return result;
     }
 
-    private BigDecimal scalar(String sql, UUID cooperativeId) {
-        BigDecimal v = jdbc.queryForObject(sql, BigDecimal.class, cooperativeId);
+    private BigDecimal scalar(String sql, Object... args) {
+        BigDecimal v = jdbc.queryForObject(sql, BigDecimal.class, args);
         return v == null ? BigDecimal.ZERO : v;
     }
 

@@ -36,6 +36,7 @@ class PermanentDeletionIntegrationTest {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private LoanRepository loanRepository;
+    @Autowired private rw.terimbere.csams.modules.position.MemberPositionService positionService;
 
     @Test
     void aPresidentDeletesAMemberAndAllTheirRecords() throws Exception {
@@ -157,6 +158,14 @@ class PermanentDeletionIntegrationTest {
                 assertThat(r.getResponse().getContentType()).contains("PDF".equals(format) ? "pdf" : "spreadsheetml");
             }
         }
+        // Positions follow the "to" date: as at yesterday, today's payment is not in the capital yet.
+        LocalDate today = LocalDate.now(PaymentScenario.KIGALI);
+        var now = positionService.compute(p.id(), today).members().stream()
+                .filter(m -> m.memberUserId().equals(p.payer.id())).findFirst().orElseThrow();
+        var before = positionService.compute(p.id(), today.minusDays(1)).members().stream()
+                .filter(m -> m.memberUserId().equals(p.payer.id())).findFirst().orElseThrow();
+        assertThat(now.capital()).isEqualByComparingTo("1000");
+        assertThat(before.capital()).isEqualByComparingTo("0");
         // A member exports their own statement.
         MvcResult mine = mockMvc.perform(post(p.base() + "/reports/export")
                         .header("Authorization", PaymentScenario.bearer(p.payer))
