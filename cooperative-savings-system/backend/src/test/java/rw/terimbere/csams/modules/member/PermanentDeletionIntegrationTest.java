@@ -40,6 +40,7 @@ class PermanentDeletionIntegrationTest {
     @Test
     void aPresidentDeletesAMemberAndAllTheirRecords() throws Exception {
         PaymentScenario p = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 2);
+        p.row(NOW);
         p.postedFor(p.payer, "2000", contribution(NOW, "2000"));
         p.loan("10000", "600");
         UUID scheme = p.id();
@@ -74,6 +75,7 @@ class PermanentDeletionIntegrationTest {
     @Test
     void aMemberWhoRecordedOthersRecordsAsAnOfficerIsNotPurged() throws Exception {
         PaymentScenario p = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 1);
+        p.row(NOW);
         p.postedFor(p.payer, "1000", contribution(NOW, "1000"));
         MvcResult preview = mockMvc.perform(get(p.base() + "/members/" + p.reviewer.id() + "/full-deletion")
                         .header("Authorization", PaymentScenario.bearer(p.scheme.president())))
@@ -89,9 +91,11 @@ class PermanentDeletionIntegrationTest {
     @Test
     void onlyAPlatformAdministratorDeletesASchemeForGood_andOtherSchemesAreUntouched() throws Exception {
         PaymentScenario doomed = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 1);
+        doomed.row(NOW);
         doomed.postedFor(doomed.payer, "1000", contribution(NOW, "1000"));
         doomed.loan("5000", "300");
         PaymentScenario other = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 1);
+        other.row(NOW);
         other.postedFor(other.payer, "1000", contribution(NOW, "1000"));
         UUID id = doomed.id();
         String name = jdbc.queryForObject("select name from cooperatives where id = ?", String.class, id);
@@ -132,6 +136,7 @@ class PermanentDeletionIntegrationTest {
     @Test
     void theStatementAndOfficerReportsExportAsPdfAndExcel() throws Exception {
         PaymentScenario p = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 1);
+        p.row(NOW);
         p.postedFor(p.payer, "1000", contribution(NOW, "1000"));
         p.loan("5000", "300");
         String from = LocalDate.now(PaymentScenario.KIGALI).withDayOfYear(1).toString();

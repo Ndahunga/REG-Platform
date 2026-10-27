@@ -382,7 +382,7 @@ class ReportAndContributionImportIntegrationTest {
     }
 
     @ParameterizedTest
-    @EnumSource(ReportType.class)
+    @EnumSource(value = ReportType.class, mode = EnumSource.Mode.EXCLUDE, names = "MEMBER_STATEMENT")
     void export_eachReportType_withFromAndTo_returnsPdf(ReportType type) throws Exception {
         MvcResult export = mockMvc.perform(post("/api/v1/cooperatives/" + cooperativeId + "/reports/export")
                         .header("Authorization", "Bearer " + superAdminToken)
@@ -587,7 +587,7 @@ class ReportAndContributionImportIntegrationTest {
         mockMvc.perform(get("/api/v1/cooperatives/" + cooperativeId + "/reports/types")
                         .header("Authorization", "Bearer " + superAdminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(15))
+                .andExpect(jsonPath("$.data.length()").value(ReportType.values().length))
                 .andExpect(jsonPath("$.data[0].code").isNotEmpty())
                 .andExpect(jsonPath("$.data[0].label").isNotEmpty());
     }

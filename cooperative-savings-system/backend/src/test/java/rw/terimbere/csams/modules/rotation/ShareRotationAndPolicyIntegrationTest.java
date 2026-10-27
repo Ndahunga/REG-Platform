@@ -164,7 +164,8 @@ class ShareRotationAndPolicyIntegrationTest {
                     + " values (?, ?, ?, ?, ?)", UUID.randomUUID(), p.id(), a.id(), start.atDay(1).minusDays(1), importId);
         }
         String v1 = workbook(start, p.payer.username(), b.username(), c.username(), "2000", true);
-        assertThat(status(uploadWorkbook(p, v1, null))).isEqualTo(200);
+        MvcResult first = uploadWorkbook(p, v1, null);
+        assertThat(status(first)).as(first.getResponse().getContentAsString()).isEqualTo(200);
 
         // Since the import: B pays this month, and B's turn of last month is paid out.
         p.postedFor(b, "3000", contribution(NOW, "3000"));
@@ -182,7 +183,7 @@ class ShareRotationAndPolicyIntegrationTest {
 
         // A correction needs a reason.
         MvcResult noReason = uploadWorkbook(p, workbook(start, p.payer.username(), b.username(), c.username(), "1500", true), null);
-        assertThat(status(noReason)).isEqualTo(422);
+        assertThat(status(noReason)).as(noReason.getResponse().getContentAsString()).isEqualTo(422);
 
         // Corrected: the payer had received 1,500, not 2,000. B's paid-out turn moves to the corrected cycle.
         MvcResult corrected = uploadWorkbook(p, workbook(start, p.payer.username(), b.username(), c.username(), "1500", true), "The payer received 1,500 not 2,000");
@@ -199,7 +200,7 @@ class ShareRotationAndPolicyIntegrationTest {
 
         // A correction that drops the turn already paid out is refused, and nothing changes.
         MvcResult dropped = uploadWorkbook(p, workbook(start, p.payer.username(), b.username(), c.username(), "1500", false), "Moving B's turn elsewhere");
-        assertThat(status(dropped)).isEqualTo(422);
+        assertThat(status(dropped)).as(dropped.getResponse().getContentAsString()).isEqualTo(422);
         assertThat(dropped.getResponse().getContentAsString()).contains("ROTATION_RECORDS_NEED_THEIR_TURN");
         assertThat(jdbc.queryForObject("select count(*) from opening_workbook_imports where cooperative_id = ? and status = 'CURRENT'",
                 Long.class, p.id())).isEqualTo(1L);

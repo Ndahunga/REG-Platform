@@ -8,6 +8,22 @@ try:
             msgs.append(line.strip()[:400])
 except FileNotFoundError:
     pass
+# Exceptions logged by the application while tests ran (a 500 shows only its status in the test failure).
+import re
+seen = []
+try:
+    for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
+        t = line.strip()
+        if t.startswith("at ") or t.startswith("[ERROR]") or "Tests run" in t:
+            continue
+        if re.match(r"^(Caused by: )?[a-z][\w.$]*(Exception|Error)(: |$)", t) or ("Unhandled exception" in t):
+            key = re.sub(r"[0-9a-f-]{36}", "<id>", t)[-500:]
+            if key not in seen:
+                seen.append(key)
+except FileNotFoundError:
+    pass
+if seen:
+    msgs.append("Logged exceptions: " + " || ".join(seen[:25]))
 for f in glob.glob("target/surefire-reports/TEST-*.xml") + glob.glob("target/failsafe-reports/TEST-*.xml"):
     try:
         root = ET.parse(f).getroot()

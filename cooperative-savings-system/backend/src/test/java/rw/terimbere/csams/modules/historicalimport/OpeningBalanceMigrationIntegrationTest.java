@@ -527,11 +527,12 @@ class OpeningBalanceMigrationIntegrationTest {
                         .getOpeningContributionAmount())
                 .as("checking a correction changes nothing")
                 .isEqualByComparingTo("300");
-        mockMvc.perform(post(base(cooperativeId) + "/" + second.path("importId").asText() + "/confirm")
+        MvcResult revised = mockMvc.perform(post(base(cooperativeId) + "/" + second.path("importId").asText() + "/confirm")
                         .header("Authorization", "Bearer " + superAdminToken)
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"Contributions and shares were wrong\"}"))
-                .andExpect(status().isOk());
+                .andReturn();
+        assertThat(revised.getResponse().getStatus()).as(revised.getResponse().getContentAsString()).isEqualTo(200);
         assertThat(openingBalanceRepository.findByCooperativeId(cooperativeId)).hasSize(1);
         assertThat(openingBalanceRepository
                         .findByCooperativeIdAndMemberUserId(cooperativeId, existingUser.getId())
