@@ -238,8 +238,8 @@ class ShareRotationAndPolicyIntegrationTest {
             }
             for (int i = 0; i < t.size(); i++) {
                 var row = turns.createRow(i);
-                for (int c = 0; c < 5; c++) {
-                    row.createCell(c).setCellValue(t.get(i)[c]);
+                for (int col = 0; col < 5; col++) {
+                    row.createCell(col).setCellValue(t.get(i)[col]);
                 }
             }
             var members = wb.createSheet("Members");
@@ -247,8 +247,8 @@ class ShareRotationAndPolicyIntegrationTest {
                 {payer, "1400", "0"}, {b, "2100", "0"}};
             for (int i = 0; i < m.length; i++) {
                 var row = members.createRow(i);
-                for (int c = 0; c < 3; c++) {
-                    row.createCell(c).setCellValue(m[i][c]);
+                for (int col = 0; col < 3; col++) {
+                    row.createCell(col).setCellValue(m[i][col]);
                 }
             }
             wb.write(out);
