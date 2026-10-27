@@ -83,6 +83,14 @@ public class HistoricalImportService {
     private final ObjectMapper objectMapper;
     private final PlatformTransactionManager transactionManager;
     private final HistoricalMigrationGuard migrationGuard;
+    private final ImportRevisionService revisions;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    /** What undoing the earlier upload did, so the corrected one can be completed. */
+    private record RevisionOutcome(
+            ImportRevisionService.MembersReversal members, ImportRevisionService.LoanRevision loans) {}
+
+    private record Simulation(ValidatedMigration validated, RevisionOutcome outcome) {}
 
     @Transactional(readOnly = true)
     public byte[] downloadTemplate(UUID cooperativeId) {
@@ -121,6 +129,9 @@ public class HistoricalImportService {
         boolean loansOnly = parsed.kind() == HistoricalImportKind.OPENING_LOANS;
         BigDecimal funds = loansOnly ? null : requireValidOpeningFunds(openingAvailableFunds);
 
+        // A validated upload of the same workbook already exists: this one is a correction of it.
+        HistoricalImport previous = revisions.current(cooperativeId, parsed.kind());
+
         String originalFilename = file.getOriginalFilename() == null ? "historical-import.xlsx" : file.getOriginalFilename();
         String storageKey = "historical-imports/" + cooperativeId + "/" + UUID.randomUUID() + ".xlsx";
         fileStorageService.store(
@@ -138,9 +149,19 @@ public class HistoricalImportService {
                 .cutoverDate(cutoverDate)
                 .openingAvailableFunds(funds)
                 .uploadedBy(principal.getId())
+                .revisionOfImportId(previous == null ? null : previous.getId())
                 .build());
 
-        ValidatedMigration validated = validator.validate(cooperative.getId(), parsed, cutoverDate, funds);
+        ValidatedMigration validated;
+        RevisionOutcome outcome = null;
+        if (previous == null) {
+            validated = validator.validate(cooperative.getId(), parsed, cutoverDate, funds);
+        } else {
+            // Validated as the scheme would be with the earlier upload undone; nothing of that is kept.
+            Simulation simulation = simulateRevision(cooperative.getId(), previous.getId(), bytes, cutoverDate, funds);
+            validated = simulation.validated();
+            outcome = simulation.outcome();
+        }
         persistPreviewRows(importEntity.getId(), validated);
         importEntity.setTotalRows(validated.totalRows());
         importEntity.setValidRows(validated.validRows());
@@ -192,16 +213,52 @@ public class HistoricalImportService {
                 .sheets(sheetSummaries(validated.summary))
                 .errors(validated.errors)
                 .errorSummary(importEntity.getErrorSummary())
+                .revisionOfImportId(previous == null ? null : previous.getId())
+                .revisionOfFilename(previous == null ? null : previous.getOriginalFilename())
+                .revisionOfConfirmedAt(previous == null ? null : previous.getConfirmedAt())
+                .unchangedLoans(outcome == null || outcome.loans() == null ? null : outcome.loans().unchanged())
+                .replacedLoans(outcome == null || outcome.loans() == null ? null : outcome.loans().replaced())
                 .build();
     }
 
+    private Simulation simulateRevision(UUID cooperativeId, UUID previousId, byte[] bytes, LocalDate cutoverDate, BigDecimal funds) {
+        TransactionTemplate simulation = new TransactionTemplate(transactionManager);
+        simulation.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return simulation.execute(status -> {
+            status.setRollbackOnly();
+            HistoricalImport previous = importRepository.findByIdAndCooperativeId(previousId, cooperativeId).orElseThrow();
+            MigrationWorkbook parsed = parser.parse(bytes);
+            RevisionOutcome outcome = undo(cooperativeId, previous, parsed, cutoverDate);
+            return new Simulation(validator.validate(cooperativeId, parsed, cutoverDate, funds), outcome);
+        });
+    }
+
+    /** Undoes the earlier upload so the corrected workbook (adjusted here when needed) can take its place. */
+    private RevisionOutcome undo(UUID cooperativeId, HistoricalImport previous, MigrationWorkbook corrected, LocalDate cutoverDate) {
+        if (previous.getImportKind() == HistoricalImportKind.OPENING_LOANS) {
+            return new RevisionOutcome(null, revisions.reviseLoans(cooperativeId, previous, corrected, cutoverDate));
+        }
+        ImportRevisionService.MembersReversal members = revisions.reverseMembers(cooperativeId, previous);
+        revisions.applyProfileCorrections(cooperativeId, corrected, members.previousMembers());
+        return new RevisionOutcome(members, null);
+    }
+
     public HistoricalImportConfirmResponse confirm(UUID cooperativeId, UUID importId, HttpServletRequest request) {
+        return confirm(cooperativeId, importId, null, request);
+    }
+
+    /** Validates (confirms) an upload. A correction of an earlier validated upload needs the reason for it. */
+    public HistoricalImportConfirmResponse confirm(UUID cooperativeId, UUID importId, String reason, HttpServletRequest request) {
         Cooperative cooperative = requireCooperative(cooperativeId);
         UserPrincipal principal = requireLeadership(cooperativeId);
         // Refused before anything is touched (and so before the import could be marked failed) when this scheme
         // migrates the other way: bringing the same history in twice would count it twice.
         HistoricalImport candidate = importRepository.findByIdAndCooperativeId(importId, cooperativeId).orElse(null);
-        if (candidate != null && candidate.getStatus() == HistoricalImportStatus.READY) {
+        boolean revision = candidate != null && candidate.getRevisionOfImportId() != null;
+        if (revision && (reason == null || reason.trim().length() < 10)) {
+            throw new BusinessException("REVISION_REASON_REQUIRED", "Explain what this corrected upload fixes (at least 10 characters)");
+        }
+        if (candidate != null && candidate.getStatus() == HistoricalImportStatus.READY && !revision) {
             migrationGuard.requireStrategy(
                     cooperativeId, MigrationStrategy.OPENING_BALANCE, candidate.getCutoverDate(), principal.getId());
             if (candidate.getImportKind() == HistoricalImportKind.OPENING_LOANS
@@ -214,7 +271,8 @@ public class HistoricalImportService {
         }
         TransactionTemplate business = new TransactionTemplate(transactionManager);
         try {
-            return business.execute(status -> doConfirm(cooperative, importId, principal, request));
+            String cleanReason = reason == null ? null : reason.trim();
+            return business.execute(status -> doConfirm(cooperative, importId, principal, cleanReason, request));
         } catch (RuntimeException ex) {
             TransactionTemplate markFailed = new TransactionTemplate(transactionManager);
             markFailed.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -232,7 +290,7 @@ public class HistoricalImportService {
     }
 
     private HistoricalImportConfirmResponse doConfirm(
-            Cooperative cooperative, UUID importId, UserPrincipal principal, HttpServletRequest request) {
+            Cooperative cooperative, UUID importId, UserPrincipal principal, String reason, HttpServletRequest request) {
         HistoricalImport importEntity = importRepository
                 .findByIdAndCooperativeId(importId, cooperative.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("HistoricalImport", importId));
@@ -252,8 +310,26 @@ public class HistoricalImportService {
             throw new BusinessException("IMPORT_FILE_ALREADY_CONFIRMED", "This workbook has already been confirmed for this Saving Scheme");
         }
 
+        HistoricalImport previous = null;
+        if (importEntity.getRevisionOfImportId() != null) {
+            previous = importRepository.findByIdAndCooperativeId(importEntity.getRevisionOfImportId(), cooperative.getId()).orElse(null);
+            if (previous == null || previous.getStatus() != HistoricalImportStatus.CONFIRMED) {
+                throw new BusinessException("REVISION_OUTDATED",
+                        "The upload this corrects was already replaced. Upload the corrected workbook again.");
+            }
+            if (previous.getImportKind() == HistoricalImportKind.OPENING_BALANCE
+                    && !importEntity.getCutoverDate().equals(previous.getCutoverDate())) {
+                // The correction moves the cutover date: the scheme's opening balances are now as at the new date.
+                jdbc.update("update cooperative_migration_strategies set cutover_date = ? where cooperative_id = ? and strategy = 'OPENING_BALANCE'",
+                        importEntity.getCutoverDate(), cooperative.getId());
+            }
+            migrationGuard.requireStrategy(
+                    cooperative.getId(), MigrationStrategy.OPENING_BALANCE, importEntity.getCutoverDate(), principal.getId());
+        }
+
         // Re-validate against the data as it is now: balances or identities may have changed since preview.
         MigrationWorkbook parsed = parser.parse(readStored(importEntity.getStorageKey()));
+        RevisionOutcome outcome = previous == null ? null : undo(cooperative.getId(), previous, parsed, importEntity.getCutoverDate());
         ValidatedMigration validated =
                 validator.validate(
                         cooperative.getId(),
@@ -263,7 +339,8 @@ public class HistoricalImportService {
         if (validated.hasErrors() || validated.invalidRows() > 0) {
             throw ValidationException.coded("IMPORT_NO_LONGER_VALID", "Workbook is no longer valid. Fix the errors and upload again.");
         }
-        if (validated.validRows() <= 0) {
+        boolean onlyKeptLoans = outcome != null && outcome.loans() != null && outcome.loans().unchanged() > 0;
+        if (validated.validRows() <= 0 && !onlyKeptLoans) {
             throw ValidationException.coded("IMPORT_NO_ROWS", "Workbook has no importable rows");
         }
 
@@ -279,6 +356,21 @@ public class HistoricalImportService {
         }
         importRowRepository.saveAll(rows);
 
+        List<String> keptMembers = List.of();
+        if (outcome != null && outcome.members() != null) {
+            revisions.restoreRotation(cooperative.getId(), outcome.members());
+            keptMembers = revisions.removeDroppedMembers(
+                    cooperative.getId(), outcome.members().previousMembers(), revisions.membersOf(cooperative.getId(), importId));
+        }
+        if (outcome != null && outcome.loans() != null) {
+            revisions.moveKeptLoans(outcome.loans().kept(), importId);
+        }
+        if (previous != null) {
+            previous.setSupersededByImportId(importId);
+            importRepository.save(previous);
+            importEntity.setRevisionReason(reason.length() > 500 ? reason.substring(0, 500) : reason);
+        }
+
         HistoricalImportConfirmResponse response = persisted.counts();
         response.setImportId(importEntity.getId());
         response.setStatus(HistoricalImportStatus.CONFIRMED);
@@ -290,16 +382,31 @@ public class HistoricalImportService {
         importEntity.setMigrationSummary(toJson(validated.summary));
         importRepository.save(importEntity);
 
+        Map<String, Object> payload = confirmAuditPayload(importEntity, response);
+        if (previous != null) {
+            payload.put("phase", "revise");
+            payload.put("replaces", String.valueOf(previous.getId()));
+            payload.put("replacedFilename", previous.getOriginalFilename());
+            if (outcome.loans() != null) {
+                payload.put("loansKept", outcome.loans().unchanged());
+                payload.put("loansReplaced", outcome.loans().replaced());
+            }
+            if (!keptMembers.isEmpty()) {
+                payload.put("membersLeftOutButKept", keptMembers);
+            }
+        }
         auditService.record(
                 principal.getId(),
                 cooperative.getId(),
-                AuditableAction.IMPORT,
+                previous == null ? AuditableAction.IMPORT : AuditableAction.IMPORT_REVISE,
                 "HistoricalImport",
                 importEntity.getId(),
-                null,
-                toJson(confirmAuditPayload(importEntity, response)),
+                previous == null ? null : toJson(Map.of("importId", String.valueOf(previous.getId()), "filename",
+                        String.valueOf(previous.getOriginalFilename()))),
+                toJson(payload),
                 clientIp(request),
                 userAgent(request));
+        response.setMembersLeftOutButKept(keptMembers);
         return response;
     }
 
@@ -467,6 +574,11 @@ public class HistoricalImportService {
                 .confirmedAt(entity.getConfirmedAt())
                 .cancelledAt(entity.getCancelledAt())
                 .errorSummary(entity.getErrorSummary())
+                .confirmedBy(entity.getConfirmedBy())
+                .revisionOfImportId(entity.getRevisionOfImportId())
+                .supersededByImportId(entity.getSupersededByImportId())
+                .supersededAt(entity.getSupersededAt())
+                .revisionReason(entity.getRevisionReason())
                 .build();
     }
 

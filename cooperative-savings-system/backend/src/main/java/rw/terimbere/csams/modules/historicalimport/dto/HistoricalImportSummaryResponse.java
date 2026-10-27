@@ -32,4 +32,9 @@ public class HistoricalImportSummaryResponse {
     private Instant confirmedAt;
     private Instant cancelledAt;
     private String errorSummary;
+    private UUID confirmedBy;
+    private UUID revisionOfImportId;
+    private UUID supersededByImportId;
+    private Instant supersededAt;
+    private String revisionReason;
 }

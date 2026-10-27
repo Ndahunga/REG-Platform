@@ -108,4 +108,19 @@ public class HistoricalImport extends BaseEntity {
 
     @Column(name = "cancelled_at")
     private Instant cancelledAt;
+
+    /** The validated upload this one replaces (a corrected workbook), if any. */
+    @Column(name = "revision_of_import_id")
+    private UUID revisionOfImportId;
+
+    /** Set when a corrected upload replaced this one (status SUPERSEDED). */
+    @Column(name = "superseded_by_import_id")
+    private UUID supersededByImportId;
+
+    @Column(name = "superseded_at")
+    private Instant supersededAt;
+
+    /** Why the earlier upload was corrected. */
+    @Column(name = "revision_reason", length = 500)
+    private String revisionReason;
 }

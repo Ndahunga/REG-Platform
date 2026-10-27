@@ -43,4 +43,12 @@ public class HistoricalImportPreviewResponse {
     /** Legacy imports only. */
     private HistoricalReconciliationSummary reconciliation;
     private String errorSummary;
+    /** Set when this upload corrects an earlier validated one, which it replaces when validated. */
+    private UUID revisionOfImportId;
+    private String revisionOfFilename;
+    private java.time.Instant revisionOfConfirmedAt;
+    /** Loans workbook revision: loans identical in both versions, kept as they are (with anything recorded on them). */
+    private Integer unchangedLoans;
+    /** Loans of the earlier version that this one removes or changes. */
+    private Integer replacedLoans;
 }

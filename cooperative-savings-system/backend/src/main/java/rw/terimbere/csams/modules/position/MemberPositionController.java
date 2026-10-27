@@ -66,8 +66,17 @@ public class MemberPositionController {
     public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.rotation.service.OpeningPositionsWorkbookService.ImportResult>> openingImport(
             @PathVariable UUID cooperativeId,
             @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file,
+            @org.springframework.web.bind.annotation.RequestParam(name = "reason", required = false) String reason,
             jakarta.servlet.http.HttpServletRequest http) {
-        return ResponseEntity.ok(ApiResponse.ok(workbookService.importWorkbook(cooperativeId, file, http)));
+        return ResponseEntity.ok(ApiResponse.ok(workbookService.importWorkbook(cooperativeId, file, reason, http)));
+    }
+
+    @GetMapping("/opening-workbook/history")
+    @PreAuthorize("hasAuthority('COOPERATIVE_WRITE')")
+    @Operation(summary = "Every upload of the rotation and positions workbook (current and replaced), newest first")
+    public ResponseEntity<ApiResponse<java.util.List<rw.terimbere.csams.modules.rotation.service.OpeningPositionsWorkbookService.UploadRecord>>> openingHistory(
+            @PathVariable UUID cooperativeId) {
+        return ResponseEntity.ok(ApiResponse.ok(workbookService.history(cooperativeId)));
     }
 
     @GetMapping(value = "/export.csv", produces = "text/csv")

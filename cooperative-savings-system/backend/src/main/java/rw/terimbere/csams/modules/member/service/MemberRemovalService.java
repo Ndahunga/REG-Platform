@@ -92,6 +92,9 @@ public class MemberRemovalService {
     private final MemberService memberService;
     private final AuditService auditService;
     private final Clock clock;
+    private final rw.terimbere.csams.shared.erasure.DataEraser eraser;
+    private final rw.terimbere.csams.shared.erasure.AccountCleanup accountCleanup;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     private volatile List<Source> foreignKeysToUsers;
 
@@ -257,6 +260,202 @@ public class MemberRemovalService {
             // something still refers to the member that the checks could not see: nothing is deleted
             throw new ConflictException("MEMBER_HAS_ACTIVITY_RECORDS", "This member is still referred to by other records and cannot be deleted");
         }
+    }
+
+    // ------------------------------------------------------------------ full deletion (purge)
+
+    /** Columns that say who a row is about (as opposed to who recorded or approved it). */
+    private static final List<String> SUBJECT_COLUMNS = List.of(
+            "member_user_id", "beneficiary_member_user_id", "guarantor_user_id", "recipient_user_id",
+            "new_recipient_user_id", "previous_recipient_user_id", "original_recipient_user_id", "user_id");
+
+    /** Never deleted with a member: the trail of what happened. */
+    private static final Set<String> KEPT = Set.of("audit_logs", "data_deletion_records");
+
+    public record PurgePreview(
+            UUID memberUserId,
+            String username,
+            boolean canPurge,
+            /** A stable code when the member cannot be fully deleted. */
+            String blockedReason,
+            /** What blocks it: tables where the member acted as an officer, or months only they receive. */
+            List<String> blockedDetails,
+            /** The account goes too (the member belongs to no other scheme). */
+            boolean accountRemoved,
+            long rowsTotal,
+            java.util.Map<String, Integer> rowsByTable) {}
+
+    public record PurgeRequest(String reason, String confirmUsername) {}
+
+    private record PurgeAssessment(
+            rw.terimbere.csams.shared.erasure.DataEraser.Plan plan,
+            java.util.Map<UUID, UUID> reassign,
+            String blocked,
+            List<String> details) {}
+
+    /**
+     * What deleting the member and everything they have in this scheme would remove (nothing is changed). Meant for
+     * records that should never have been there, such as a member uploaded with false information.
+     */
+    @Transactional(readOnly = true)
+    public PurgePreview purgePreview(UUID cooperativeId, UUID memberUserId) {
+        UserPrincipal actor = requireLeader(cooperativeId);
+        requireMembership(cooperativeId, memberUserId);
+        User user = userRepository.findByIdAndDeletedFalse(memberUserId).orElseThrow(() -> new ResourceNotFoundException("User", memberUserId));
+        PurgeAssessment a = assessPurge(actor, cooperativeId, user);
+        return toPreview(cooperativeId, user, a);
+    }
+
+    /**
+     * Deletes the member and everything they have in this scheme for good: contributions, payments, loans, fines,
+     * shares, opening balances, rotation turns and the ledger lines that came from them. The audit trail stays, and a
+     * deletion record keeps who did it, when and why. The account goes too when the member belongs to no other scheme.
+     */
+    @Transactional
+    public PurgePreview purge(UUID cooperativeId, UUID memberUserId, PurgeRequest request, HttpServletRequest http) {
+        UserPrincipal actor = requireLeader(cooperativeId);
+        requireMembership(cooperativeId, memberUserId);
+        User user = userRepository.findByIdAndDeletedFalse(memberUserId).orElseThrow(() -> new ResourceNotFoundException("User", memberUserId));
+        String reason = request == null || request.reason() == null ? "" : request.reason().trim();
+        if (reason.length() < 10) {
+            throw new ConflictException("REASON_REQUIRED", "Explain why the member is deleted (at least 10 characters)");
+        }
+        String typed = request.confirmUsername() == null ? "" : request.confirmUsername().trim();
+        if (!typed.equalsIgnoreCase(user.getUsername())) {
+            throw new ConflictException("CONFIRM_USERNAME_MISMATCH", "Type the member's username exactly to confirm");
+        }
+        jdbc.queryForList("select id from cooperatives where id = ? for update", UUID.class, cooperativeId);
+        PurgeAssessment a = assessPurge(actor, cooperativeId, user);
+        if (a.blocked() != null) {
+            throw new ConflictException(a.blocked(), "This member cannot be fully deleted: " + String.join("; ", a.details()));
+        }
+        PurgePreview before = toPreview(cooperativeId, user, a);
+        a.reassign().forEach((period, other) ->
+                jdbc.update("update rotation_periods set scheduled_recipient_user_id = ? where id = ?", other, period));
+        java.util.Map<String, Integer> deleted = eraser.execute(a.plan());
+        boolean accountDeleted = accountCleanup.deleteIfUnused(memberUserId);
+        long total = deleted.values().stream().mapToLong(Integer::longValue).sum();
+        String counts;
+        try {
+            counts = objectMapper.writeValueAsString(new java.util.TreeMap<>(deleted));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            counts = null;
+        }
+        String schemeName = jdbc.queryForList("select name from cooperatives where id = ?", String.class, cooperativeId)
+                .stream().findFirst().orElse(null);
+        jdbc.update("insert into data_deletion_records (id, kind, scheme_id, scheme_name, subject_user_id, subject_username, reason,"
+                        + " rows_deleted, accounts_deleted, deleted_by, deleted_at) values (?, 'MEMBER', ?, ?, ?, ?, ?, ?, ?, ?, now())",
+                UUID.randomUUID(), cooperativeId, schemeName, memberUserId, user.getUsername(),
+                reason.length() > 500 ? reason.substring(0, 500) : reason, counts, accountDeleted ? 1 : 0, actor.getId());
+        auditService.record(
+                actor.getId(),
+                cooperativeId,
+                AuditableAction.MEMBER_PURGE,
+                "User",
+                memberUserId,
+                "{\"username\":\"" + user.getUsername().replace("\"", "'") + "\"}",
+                "{\"rowsDeleted\":" + total + ",\"accountDeleted\":" + accountDeleted + "}",
+                clientIp(http),
+                http == null ? null : http.getHeader("User-Agent"));
+        return before;
+    }
+
+    private PurgePreview toPreview(UUID cooperativeId, User user, PurgeAssessment a) {
+        Long others = jdbc.queryForObject("select count(*) from cooperative_memberships where user_id = ? and cooperative_id <> ?",
+                Long.class, user.getId(), cooperativeId);
+        java.util.Map<String, Integer> counts = a.plan().counts();
+        long total = counts.values().stream().mapToLong(Integer::longValue).sum();
+        return new PurgePreview(user.getId(), user.getUsername(), a.blocked() == null, a.blocked(), a.details(),
+                (others == null || others == 0) && !isProtected(user), total, counts);
+    }
+
+    private PurgeAssessment assessPurge(UserPrincipal actor, UUID cooperativeId, User user) {
+        UUID member = user.getId();
+        rw.terimbere.csams.shared.erasure.DataGraph g = eraser.graph();
+        java.util.Map<String, List<UUID>> seeds = new java.util.LinkedHashMap<>();
+        java.util.Map<String, List<UUID>> emptied = new java.util.LinkedHashMap<>();
+        for (String table : g.tables()) {
+            if (KEPT.contains(table) || !g.has(table, "cooperative_id") || !g.has(table, "id")) {
+                continue;
+            }
+            for (String column : SUBJECT_COLUMNS) {
+                if (!g.has(table, column)) {
+                    continue;
+                }
+                List<UUID> ids = jdbc.queryForList(
+                        "select id from " + table + " where " + column + " = ? and cooperative_id = ?", UUID.class, member, cooperativeId);
+                if (ids.isEmpty()) {
+                    continue;
+                }
+                // A row about someone else that only names this member in passing keeps its place, without the name.
+                if ("original_recipient_user_id".equals(column) && g.nullable(table, column)) {
+                    emptied.computeIfAbsent(table + "." + column, k -> new ArrayList<>()).addAll(ids);
+                } else {
+                    seeds.computeIfAbsent(table, k -> new ArrayList<>()).addAll(ids);
+                }
+            }
+        }
+        rw.terimbere.csams.shared.erasure.DataEraser.Plan plan = eraser.plan(seeds);
+        emptied.forEach((key, ids) -> {
+            String[] parts = key.split("\\.");
+            plan.empty(parts[0], parts[1], ids);
+        });
+
+        List<String> details = new ArrayList<>();
+        String blocked = null;
+        if (member.equals(actor.getId())) {
+            blocked = "CANNOT_REMOVE_SELF";
+        } else if (isProtected(user)) {
+            blocked = "PROTECTED_ACCOUNT";
+        }
+        // Rows this member recorded or approved for others stay: deleting the member would leave them unexplained.
+        if (blocked == null) {
+            for (rw.terimbere.csams.shared.erasure.DataGraph.Ref ref : g.refsTo("users")) {
+                if (KEPT.contains(ref.child()) || SUBJECT_COLUMNS.contains(ref.column())
+                        || !g.has(ref.child(), "cooperative_id") || !g.has(ref.child(), "id")) {
+                    continue;
+                }
+                List<UUID> ids = jdbc.queryForList("select id from " + ref.child() + " where " + ref.column() + " = ? and cooperative_id = ?",
+                        UUID.class, member, cooperativeId);
+                long remaining = ids.stream().filter(id -> !plan.deletes(ref.child(), id)).count();
+                if (remaining > 0) {
+                    details.add(ref.child() + "." + ref.column() + " (" + remaining + ")");
+                }
+            }
+            if (!details.isEmpty()) {
+                blocked = "MEMBER_ACTED_AS_OFFICER";
+            }
+        }
+        // A month whose scheduled recipient is this member moves to another member paid that month, or blocks.
+        java.util.Map<UUID, UUID> reassign = new java.util.LinkedHashMap<>();
+        if (blocked == null && g.has("rotation_periods", "scheduled_recipient_user_id")) {
+            List<java.util.Map<String, Object>> periods = jdbc.queryForList(
+                    "select id, period_year, period_month from rotation_periods where cooperative_id = ? and scheduled_recipient_user_id = ?",
+                    cooperativeId, member);
+            for (java.util.Map<String, Object> p : periods) {
+                UUID period = (UUID) p.get("id");
+                List<UUID> others = g.has("rotation_turns", "rotation_period_id")
+                        ? jdbc.queryForList("select member_user_id from rotation_turns where rotation_period_id = ? and member_user_id <> ?"
+                                + " order by share_count desc", UUID.class, period, member)
+                        : List.of();
+                if (others.isEmpty()) {
+                    details.add(p.get("period_year") + "-" + String.format("%02d", ((Number) p.get("period_month")).intValue()));
+                } else {
+                    reassign.put(period, others.get(0));
+                }
+            }
+            if (!details.isEmpty()) {
+                blocked = "MEMBER_ONLY_RECIPIENT_OF_MONTH";
+            }
+        }
+        if (blocked == null) {
+            List<String> outside = eraser.rowsOutsideScheme(plan, cooperativeId);
+            if (!outside.isEmpty()) {
+                blocked = "MEMBER_RECORDS_SHARED";
+                details.addAll(outside);
+            }
+        }
+        return new PurgeAssessment(plan, reassign, blocked, details);
     }
 
     // ------------------------------------------------------------------ internals

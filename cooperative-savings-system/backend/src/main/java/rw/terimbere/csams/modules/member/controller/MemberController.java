@@ -163,6 +163,25 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @GetMapping("/api/v1/cooperatives/{cooperativeId}/members/{memberUserId}/full-deletion")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MANAGE') or hasAuthority('USER_WRITE')")
+    @Operation(summary = "What deleting this member and all their records in the scheme would remove (nothing is changed)")
+    public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.member.service.MemberRemovalService.PurgePreview>> purgePreview(
+            @PathVariable UUID cooperativeId, @PathVariable UUID memberUserId) {
+        return ResponseEntity.ok(ApiResponse.ok(memberRemovalService.purgePreview(cooperativeId, memberUserId)));
+    }
+
+    @PostMapping("/api/v1/cooperatives/{cooperativeId}/members/{memberUserId}/full-deletion")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MANAGE') or hasAuthority('USER_WRITE')")
+    @Operation(summary = "President or Vice President: delete this member and all their records in the scheme for good")
+    public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.member.service.MemberRemovalService.PurgePreview>> purge(
+            @PathVariable UUID cooperativeId,
+            @PathVariable UUID memberUserId,
+            @RequestBody rw.terimbere.csams.modules.member.service.MemberRemovalService.PurgeRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(ApiResponse.ok(memberRemovalService.purge(cooperativeId, memberUserId, request, httpRequest)));
+    }
+
     @PostMapping(
             value = "/api/v1/cooperatives/{cooperativeId}/members/{memberUserId}/profile-image",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

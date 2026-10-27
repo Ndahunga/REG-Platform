@@ -84,12 +84,18 @@ public class HistoricalImportController {
     @PostMapping("/{importId}/confirm")
     @PreAuthorize(
             "hasRole('PRESIDENT') or hasRole('VICE_PRESIDENT') or hasRole('SUPER_ADMIN') or hasRole('COOPERATIVE_ADMIN')")
-    @Operation(summary = "Confirm a valid historical import in one transaction")
+    @Operation(summary = "Validate (confirm) a valid upload in one transaction; a corrected upload replaces the earlier one and needs a reason")
     public ResponseEntity<ApiResponse<HistoricalImportConfirmResponse>> confirm(
-            @PathVariable UUID cooperativeId, @PathVariable UUID importId, HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(historicalImportService.confirm(cooperativeId, importId, httpRequest)));
+            @PathVariable UUID cooperativeId,
+            @PathVariable UUID importId,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) ConfirmRequest body,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(ApiResponse.ok(historicalImportService.confirm(
+                cooperativeId, importId, body == null ? null : body.reason(), httpRequest)));
     }
+
+    /** Why a corrected upload replaces the earlier one (required for a correction only). */
+    public record ConfirmRequest(String reason) {}
 
     @PostMapping("/{importId}/cancel")
     @PreAuthorize(

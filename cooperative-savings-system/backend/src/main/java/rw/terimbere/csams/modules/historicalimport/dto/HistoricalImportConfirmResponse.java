@@ -34,4 +34,7 @@ public class HistoricalImportConfirmResponse {
     private BigDecimal totalOriginalLoanAmount;
     private BigDecimal totalOutstandingLoanPrincipal;
     private BigDecimal totalHistoricalLoanPayments;
+
+    /** Correction of an earlier upload: members it left out that were kept because records exist for them. */
+    private java.util.List<String> membersLeftOutButKept;
 }

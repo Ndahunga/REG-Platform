@@ -87,6 +87,23 @@ public class OpeningPositionsWorkbookService {
     private final CooperativeRepository cooperativeRepository;
     private final SchemeFundLockService fundLockService;
     private final JdbcTemplate jdbc;
+    private final OpeningWorkbookRevisionService revisions;
+    private final rw.terimbere.csams.shared.file.FileStorageService fileStorageService;
+    private final rw.terimbere.csams.modules.audit.service.AuditService auditService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    /** One upload of the workbook: the current one, or one a correction replaced. */
+    public record UploadRecord(
+            UUID id,
+            int version,
+            String status,
+            String originalFilename,
+            UUID uploadedBy,
+            String uploadedByName,
+            java.time.Instant uploadedAt,
+            String revisionReason,
+            java.time.Instant supersededAt,
+            String summary) {}
 
     public record ImportResult(
             int membersUpdated,
@@ -135,14 +152,49 @@ public class OpeningPositionsWorkbookService {
 
     // ------------------------------------------------------------------ import
 
-    @Transactional
     public ImportResult importWorkbook(UUID cooperativeId, MultipartFile file, HttpServletRequest http) {
+        return importWorkbook(cooperativeId, file, null, http);
+    }
+
+    /** Every upload of the workbook for the scheme, newest first. */
+    @Transactional(readOnly = true)
+    public List<UploadRecord> history(UUID cooperativeId) {
+        access.requireManage(cooperativeId);
+        return jdbc.query("select o.id, o.version_number, o.status, o.original_filename, o.uploaded_by,"
+                        + " trim(coalesce(u.first_name, '') || ' ' || coalesce(u.last_name, '')) as who, o.created_at,"
+                        + " o.revision_reason, o.superseded_at, o.summary from opening_workbook_imports o left join users u on u.id = o.uploaded_by"
+                        + " where o.cooperative_id = ? order by o.version_number desc",
+                (rs, i) -> new UploadRecord(
+                        rs.getObject(1, UUID.class), rs.getInt(2), rs.getString(3), rs.getString(4), rs.getObject(5, UUID.class),
+                        rs.getString(6), rs.getTimestamp(7) == null ? null : rs.getTimestamp(7).toInstant(), rs.getString(8),
+                        rs.getTimestamp(9) == null ? null : rs.getTimestamp(9).toInstant(), rs.getString(10)),
+                cooperativeId);
+    }
+
+    /**
+     * Imports the workbook. When it was imported before, this upload is a correction: it replaces the earlier one
+     * (which stays on record as SUPERSEDED) and needs the reason for it.
+     */
+    @Transactional
+    public ImportResult importWorkbook(UUID cooperativeId, MultipartFile file, String reason, HttpServletRequest http) {
         UserPrincipal principal = access.requireManage(cooperativeId);
         fundLockService.lockSchemeFund(cooperativeId);
+        OpeningWorkbookRevisionService.Current current = revisions.current(cooperativeId);
+        String cleanReason = reason == null ? "" : reason.trim();
+        if (current != null && cleanReason.length() < 10) {
+            throw new BusinessException("REVISION_REASON_REQUIRED",
+                    "This workbook was imported before: explain what this corrected upload fixes (at least 10 characters)");
+        }
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new ValidationException("The file could not be read", Map.of("file", "Upload it again"));
+        }
         Map<String, String> settings;
         List<Map<String, String>> turns;
         List<Map<String, String>> members;
-        try (InputStream in = file.getInputStream(); Workbook wb = new XSSFWorkbook(in)) {
+        try (InputStream in = new java.io.ByteArrayInputStream(bytes); Workbook wb = new XSSFWorkbook(in)) {
             settings = readSettings(wb.getSheet(SHEET_SCHEME));
             turns = readRows(wb.getSheet(SHEET_TURNS), TURN_HEADERS);
             members = readRows(wb.getSheet(SHEET_MEMBERS), MEMBER_HEADERS);
@@ -152,6 +204,18 @@ public class OpeningPositionsWorkbookService {
             }
             throw new ValidationException("The file is not a readable rotation and positions workbook",
                     Map.of("file", "Download the template and fill it in"));
+        }
+
+        OpeningWorkbookRevisionService.Undone undone = null;
+        if (current != null) {
+            String rotatedText = settings.get(S_ROTATED);
+            BigDecimal rotatedUnit = null;
+            try {
+                rotatedUnit = rotatedText == null || rotatedText.isBlank() ? null : new BigDecimal(rotatedText.replace(",", "").trim());
+            } catch (NumberFormatException ignored) {
+                // reported below with the other problems of the workbook
+            }
+            undone = revisions.undo(cooperativeId, current, rotatedUnit);
         }
 
         Map<String, UUID> ids = new HashMap<>();
@@ -263,6 +327,7 @@ public class OpeningPositionsWorkbookService {
                 cooperativeId, MoneyUtils.scaleForStorage(income), principal.getId());
 
         RotationMigrationService.RotationImportResponse rotation = null;
+        YearMonth firstCollected = null;
         if (cycle != null) {
             YearMonth now = access.currentMonth();
             String firstText = settings.entrySet().stream()
@@ -278,12 +343,63 @@ public class OpeningPositionsWorkbookService {
             }
             List<RotationMigrationService.MemberRotationOpening> openingsIn = new ArrayList<>();
             rotatedPaid.forEach((id, paid) -> openingsIn.add(new RotationMigrationService.MemberRotationOpening(id, paid, null)));
+            firstCollected = now;
             rotation = migrationService.importRotation(cooperativeId, new RotationMigrationService.RotationImportRequest(
                     now.getYear(), now.getMonthValue(), rotated, cycle, openingsIn, cash), http);
             warnings.addAll(rotation.warnings());
         }
-        return new ImportResult(updated, MoneyUtils.scaleForStorage(owedTotal), MoneyUtils.scaleForStorage(income),
+        UUID newCycle = rotation == null || rotation.cycle() == null ? null : rotation.cycle().id();
+        if (undone != null) {
+            revisions.moveToCorrectedCycle(cooperativeId, undone, newCycle);
+        }
+        ImportResult result = new ImportResult(updated, MoneyUtils.scaleForStorage(owedTotal), MoneyUtils.scaleForStorage(income),
                 rotation != null, rotation, warnings);
+        record(cooperativeId, principal.getId(), file, bytes, current, cleanReason, newCycle, firstCollected, result, http);
+        return result;
+    }
+
+    private void record(UUID cooperativeId, UUID actor, MultipartFile file, byte[] bytes, OpeningWorkbookRevisionService.Current current,
+            String reason, UUID cycleId, YearMonth first, ImportResult result, HttpServletRequest http) {
+        String hash;
+        try {
+            hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+        String key = "opening-workbooks/" + cooperativeId + "/" + UUID.randomUUID() + ".xlsx";
+        try {
+            fileStorageService.store(key, new java.io.ByteArrayInputStream(bytes), bytes.length,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        } catch (RuntimeException e) {
+            key = null; // the import stands; only the stored copy of the file is missing
+        }
+        String summary = "{\"membersUpdated\":" + result.membersUpdated() + ",\"owedToMembers\":\"" + result.totalOwedToMembers().toPlainString()
+                + "\",\"unallocatedIncome\":\"" + result.unallocatedIncome().toPlainString() + "\",\"rotationImported\":" + result.rotationImported()
+                + (result.rotation() == null ? "" : ",\"rotatedPaid\":\"" + result.rotation().totalRotatedPaid().toPlainString()
+                        + "\",\"received\":\"" + result.rotation().totalReceived().toPlainString() + "\"") + "}";
+        UUID id = UUID.randomUUID();
+        if (current != null) {
+            jdbc.update("update opening_workbook_imports set status = 'SUPERSEDED', superseded_at = now() where id = ?", current.id());
+        }
+        String name = file.getOriginalFilename();
+        jdbc.update("insert into opening_workbook_imports (id, cooperative_id, version_number, status, original_filename, file_hash, storage_key,"
+                        + " cycle_id, first_month_year, first_month_month, summary, revision_reason, supersedes_id, uploaded_by, created_at)"
+                        + " values (?, ?, ?, 'CURRENT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())",
+                id, cooperativeId, revisions.nextVersion(cooperativeId), name == null ? null : name.substring(0, Math.min(name.length(), 500)),
+                hash, key, cycleId, first == null ? null : first.getYear(), first == null ? null : first.getMonthValue(), summary,
+                current == null ? null : (reason.length() > 500 ? reason.substring(0, 500) : reason),
+                current == null ? null : current.id(), actor);
+        auditService.record(
+                actor,
+                cooperativeId,
+                current == null ? rw.terimbere.csams.shared.auditing.AuditableAction.IMPORT
+                        : rw.terimbere.csams.shared.auditing.AuditableAction.IMPORT_REVISE,
+                "OpeningWorkbookImport",
+                id,
+                current == null ? null : "{\"replaces\":\"" + current.id() + "\",\"version\":" + current.version() + "}",
+                summary,
+                http == null ? null : http.getRemoteAddr(),
+                http == null ? null : http.getHeader("User-Agent"));
     }
 
     // ------------------------------------------------------------------ reading

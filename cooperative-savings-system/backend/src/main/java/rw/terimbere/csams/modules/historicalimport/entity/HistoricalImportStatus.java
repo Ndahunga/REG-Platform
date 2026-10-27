@@ -7,5 +7,7 @@ public enum HistoricalImportStatus {
     INVALID,
     CONFIRMED,
     CANCELLED,
-    FAILED
+    FAILED,
+    /** Replaced by a corrected upload; kept as the record of what was imported before. */
+    SUPERSEDED
 }
