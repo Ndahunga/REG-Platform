@@ -321,10 +321,13 @@ public class OpeningPositionsWorkbookService {
                     Map.of("workbook", String.join("; ", errors.subList(0, Math.min(errors.size(), 25)))));
         }
 
-        jdbc.update("insert into scheme_opening_positions (cooperative_id, unallocated_income, updated_by, updated_at)"
-                        + " values (?, ?, ?, now()) on conflict (cooperative_id) do update set unallocated_income = excluded.unallocated_income,"
-                        + " updated_by = excluded.updated_by, updated_at = now()",
-                cooperativeId, MoneyUtils.scaleForStorage(income), principal.getId());
+        // Portable upsert (the same statement runs on PostgreSQL and on the test database).
+        int updatedPositions = jdbc.update("update scheme_opening_positions set unallocated_income = ?, updated_by = ?, updated_at = now()"
+                        + " where cooperative_id = ?", MoneyUtils.scaleForStorage(income), principal.getId(), cooperativeId);
+        if (updatedPositions == 0) {
+            jdbc.update("insert into scheme_opening_positions (cooperative_id, unallocated_income, updated_by, updated_at) values (?, ?, ?, now())",
+                    cooperativeId, MoneyUtils.scaleForStorage(income), principal.getId());
+        }
 
         RotationMigrationService.RotationImportResponse rotation = null;
         YearMonth firstCollected = null;
