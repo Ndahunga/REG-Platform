@@ -31,6 +31,8 @@ public class OpeningWorkbookRevisionService {
 
     private final JdbcTemplate jdbc;
     private final DataEraser eraser;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
     public record Current(UUID id, int version, UUID cycleId, YearMonth firstMonth) {}
 
@@ -112,6 +114,7 @@ public class OpeningWorkbookRevisionService {
 
     /** Moves what was recorded on the earlier cycle to the corrected one, then deletes the earlier cycle. */
     public void moveToCorrectedCycle(UUID cooperativeId, Undone undone, UUID newCycleId) {
+        entityManager.flush(); // the corrected cycle and its turns are read with SQL below
         if (undone.oldCycleId() == null) {
             return;
         }

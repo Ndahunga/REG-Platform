@@ -67,6 +67,8 @@ class ImportRevisionService {
     private final HistoricalImportRowRepository importRowRepository;
     private final FileStorageService fileStorageService;
     private final MigrationWorkbookParser parser = new MigrationWorkbookParser();
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
     record RotationFields(BigDecimal paid, BigDecimal received, BigDecimal owed) {
         boolean any() {
@@ -175,6 +177,7 @@ class ImportRevisionService {
 
     /** Rotation positions imported for a member before the correction are carried to the member's new opening balance. */
     void restoreRotation(UUID cooperativeId, MembersReversal reversal) {
+        entityManager.flush(); // the corrected opening balances are written before they are read with SQL
         List<String> lost = new ArrayList<>();
         reversal.rotation().forEach((member, f) -> {
             int n = jdbc.update("update member_opening_balances set opening_rotation_paid = ?, opening_rotation_received = ?,"
@@ -196,6 +199,7 @@ class ImportRevisionService {
      * scheme) when nothing else was recorded for them; otherwise kept, and named so an officer can decide.
      */
     List<String> removeDroppedMembers(UUID cooperativeId, Set<UUID> previousMembers, Set<UUID> nowMembers) {
+        entityManager.flush();
         List<String> kept = new ArrayList<>();
         DataGraph g = eraser.graph();
         for (UUID member : previousMembers) {
@@ -227,6 +231,7 @@ class ImportRevisionService {
     }
 
     Set<UUID> membersOf(UUID cooperativeId, UUID importId) {
+        entityManager.flush();
         return new HashSet<>(jdbc.queryForList(
                 "select member_user_id from member_opening_balances where cooperative_id = ? and historical_import_id = ?",
                 UUID.class, cooperativeId, importId));
@@ -293,6 +298,7 @@ class ImportRevisionService {
 
     /** The loans kept from the earlier version now belong to the upload that replaced it. */
     void moveKeptLoans(List<UUID> kept, UUID newImportId) {
+        entityManager.flush();
         for (UUID loan : kept) {
             jdbc.update("update loans set opening_import_id = ? where id = ?", newImportId, loan);
         }
