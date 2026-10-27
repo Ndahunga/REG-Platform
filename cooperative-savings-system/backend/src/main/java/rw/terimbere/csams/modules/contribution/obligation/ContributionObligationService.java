@@ -345,6 +345,15 @@ public class ContributionObligationService {
      */
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public int materializeMonths(UUID cooperativeId, List<YearMonth> months, UUID actorId) {
+        return materializeMonths(cooperativeId, months, actorId, null);
+    }
+
+    /**
+     * As above, but a migration may also create the months from {@code firstMonth} (the first month after the cutover,
+     * which can already have begun): those contributions were never recorded anywhere else and must be collectable.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public int materializeMonths(UUID cooperativeId, List<YearMonth> months, UUID actorId, YearMonth firstMonth) {
         Cooperative cooperative = cooperativeRepository
                 .findByIdAndDeletedFalse(cooperativeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cooperative", cooperativeId));
@@ -354,7 +363,8 @@ public class ContributionObligationService {
                 membershipRepository.findByCooperativeIdAndMembershipStatus(cooperativeId, "ACTIVE");
         int created = 0;
         for (YearMonth ym : months) {
-            if (ym.isBefore(current)) {
+            YearMonth floor = firstMonth != null && firstMonth.isBefore(current) ? firstMonth : current;
+            if (ym.isBefore(floor)) {
                 continue;
             }
             Set<UUID> existing = contributionRepository

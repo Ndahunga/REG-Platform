@@ -73,6 +73,7 @@ public class OpeningPositionsWorkbookService {
     static final String S_MODE = "How shares are paid (ONE_SHARE_PER_TURN, ALL_SHARES_TOGETHER or GROUPED_BY_MONTH)";
     static final String S_CASH = "Rotation money held at the cutover (RWF)";
     static final String S_INCOME = "Income earned before the cutover not yet shared (RWF)";
+    static final String S_FIRST = "First month collected in the app (YYYY-MM), e.g. 2026-09 for an August cut-off";
 
     static final List<String> TURN_HEADERS = List.of(
             "Username", "Turn Month (YYYY-MM)", "Shares", "Amount Received Before Cutover (RWF)", "Date Received");
@@ -107,7 +108,7 @@ public class OpeningPositionsWorkbookService {
             Sheet scheme = wb.createSheet(SHEET_SCHEME);
             header(scheme, List.of("Setting", "Value"), bold);
             int r = 1;
-            for (String key : List.of(S_START, S_MONTHS, S_PAYOUT, S_ROTATED, S_MODE, S_CASH, S_INCOME)) {
+            for (String key : List.of(S_START, S_MONTHS, S_PAYOUT, S_ROTATED, S_MODE, S_CASH, S_INCOME, S_FIRST)) {
                 scheme.createRow(r++).createCell(0).setCellValue(key);
             }
             scheme.setColumnWidth(0, 100 * 256);
@@ -264,6 +265,17 @@ public class OpeningPositionsWorkbookService {
         RotationMigrationService.RotationImportResponse rotation = null;
         if (cycle != null) {
             YearMonth now = access.currentMonth();
+            String firstText = settings.entrySet().stream()
+                    .filter(e -> e.getKey().startsWith("First month collected in the app"))
+                    .map(Map.Entry::getValue).findFirst().orElse("");
+            if (!firstText.isBlank()) {
+                List<String> problems = new ArrayList<>();
+                YearMonth first = month(firstText, "Scheme: first month collected in the app", problems);
+                if (!problems.isEmpty()) {
+                    throw new ValidationException("The workbook has a problem", Map.of("workbook", problems.get(0)));
+                }
+                now = first;
+            }
             List<RotationMigrationService.MemberRotationOpening> openingsIn = new ArrayList<>();
             rotatedPaid.forEach((id, paid) -> openingsIn.add(new RotationMigrationService.MemberRotationOpening(id, paid, null)));
             rotation = migrationService.importRotation(cooperativeId, new RotationMigrationService.RotationImportRequest(

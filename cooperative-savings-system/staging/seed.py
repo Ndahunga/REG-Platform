@@ -107,6 +107,11 @@ def opening_workbook(template_bytes, data, sy, sm):
         "Rotation money held at the cutover (RWF)": data.get("cash"),
         "Income earned before the cutover not yet shared (RWF)": data.get("unsharedIncome", 0),
     }
+    if data.get("firstMonth") == "previous":
+        py, pm = month_add(TODAY.year, TODAY.month, -1)
+        data = dict(data, firstMonth=f"{py:04d}-{pm:02d}")
+    if data.get("firstMonth"):
+        ws.append(["First month collected in the app (YYYY-MM), e.g. 2026-09 for an August cut-off", data["firstMonth"]])
     for row in ws.iter_rows(min_row=2):
         if row[0].value in values and values[row[0].value] is not None:
             ws.cell(row=row[0].row, column=2, value=values[row[0].value])

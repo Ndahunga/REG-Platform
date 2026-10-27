@@ -103,5 +103,6 @@
       "Outstanding Principal (RWF)": 100000
     }
   ],
-  "unsharedIncome": 25000
+  "unsharedIncome": 25000,
+  "firstMonth": "previous"
 }

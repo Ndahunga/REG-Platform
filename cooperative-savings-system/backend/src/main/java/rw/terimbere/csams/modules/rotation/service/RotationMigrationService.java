@@ -87,9 +87,13 @@ public class RotationMigrationService {
         access.requireRotationModel(cooperativeId);
         fundLockService.lockSchemeFund(cooperativeId);
 
+        // The cutover month here is the first month the platform collects (e.g. September for an August cut-off).
         YearMonth cutover = YearMonth.of(request.cutoverYear(), request.cutoverMonth());
+        if (cutover.isAfter(access.currentMonth())) {
+            throw new BusinessException("CUTOVER_IN_FUTURE", "The first month collected in the app cannot be in the future");
+        }
         configurationService.createImported(cooperativeId, cutover, request.rotatingUnitAmount(), principal.getId());
-        RotationCycle cycle = cycleService.importShareCycle(cooperativeId, request.cycle(), principal.getId());
+        RotationCycle cycle = cycleService.importShareCycle(cooperativeId, request.cycle(), principal.getId(), cutover);
 
         Map<UUID, BigDecimal> turnReceived = new HashMap<>();
         for (RotationTurn t : turnRepository.findByCooperativeIdAndCycleId(cooperativeId, cycle.getId())) {

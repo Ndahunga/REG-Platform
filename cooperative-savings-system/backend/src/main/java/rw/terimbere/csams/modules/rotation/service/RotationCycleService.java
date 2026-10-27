@@ -335,7 +335,7 @@ public class RotationCycleService {
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public RotationCycle importShareCycle(
             UUID cooperativeId, rw.terimbere.csams.modules.rotation.dto.RotationDtos.ShareCycleCreateRequest request,
-            UUID actorId) {
+            UUID actorId, YearMonth firstMonth) {
         RotationCycle cycle = buildShareCycle(cooperativeId, request, null, actorId, true);
         List<RotationPeriod> periods =
                 periodRepository.findByCycleIdAndCooperativeIdOrderBySequenceNumberAsc(cycle.getId(), cooperativeId);
@@ -355,7 +355,7 @@ public class RotationCycleService {
         obligationService.materializeMonths(
                 cooperativeId,
                 periods.stream().map(p -> YearMonth.of(p.getPeriodYear(), p.getPeriodMonth())).toList(),
-                actorId);
+                actorId, firstMonth);
         return cycle;
     }
 
