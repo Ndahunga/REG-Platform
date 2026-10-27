@@ -118,3 +118,28 @@ export async function assignCooperativePresident(
   )
   return mapMember(unwrapApiData(response.data))
 }
+
+export interface SchemeDeletionPreview {
+  schemeId: string
+  schemeName: string
+  members: number
+  accountsRemoved: number
+  rowsTotal: number
+  rowsByTable: Record<string, number>
+}
+
+/** Platform administrators: what deleting the scheme for good would remove (nothing changes). */
+export async function fetchSchemeDeletionPreview(id: string): Promise<SchemeDeletionPreview> {
+  const response = await apiClient.get<ApiResponse<SchemeDeletionPreview>>(`/cooperatives/${id}/permanent-deletion`)
+  return unwrapApiData(response.data)
+}
+
+export async function deleteSchemePermanently(
+  id: string,
+  payload: { confirmName: string; reason: string },
+): Promise<{ schemeId: string; schemeName: string; rowsDeleted: number; accountsDeleted: number }> {
+  const response = await apiClient.post<
+    ApiResponse<{ schemeId: string; schemeName: string; rowsDeleted: number; accountsDeleted: number }>
+  >(`/cooperatives/${id}/permanent-deletion`, payload)
+  return unwrapApiData(response.data)
+}

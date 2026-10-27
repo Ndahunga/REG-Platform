@@ -150,3 +150,38 @@ export async function reactivateMember(cooperativeId: string, userId: string): P
 export async function deleteMember(cooperativeId: string, userId: string): Promise<void> {
   await apiClient.delete(`/cooperatives/${cooperativeId}/members/${userId}`)
 }
+
+/** What deleting the member and all their records in the scheme would remove (nothing changes). */
+export interface MemberFullDeletionPreview {
+  memberUserId: string
+  username: string
+  canPurge: boolean
+  blockedReason?: string | null
+  blockedDetails?: string[]
+  accountRemoved: boolean
+  rowsTotal: number
+  rowsByTable: Record<string, number>
+}
+
+export async function fetchMemberFullDeletion(
+  cooperativeId: string,
+  userId: string,
+): Promise<MemberFullDeletionPreview> {
+  const response = await apiClient.get<ApiResponse<MemberFullDeletionPreview>>(
+    `/cooperatives/${cooperativeId}/members/${userId}/full-deletion`,
+  )
+  return unwrapApiData(response.data)
+}
+
+/** President or Vice President: deletes the member and every record they have in the scheme, for good. */
+export async function deleteMemberFully(
+  cooperativeId: string,
+  userId: string,
+  payload: { reason: string; confirmUsername: string },
+): Promise<MemberFullDeletionPreview> {
+  const response = await apiClient.post<ApiResponse<MemberFullDeletionPreview>>(
+    `/cooperatives/${cooperativeId}/members/${userId}/full-deletion`,
+    payload,
+  )
+  return unwrapApiData(response.data)
+}

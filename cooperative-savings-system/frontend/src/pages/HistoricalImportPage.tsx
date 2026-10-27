@@ -5,6 +5,10 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   Stack,
   Switch,
@@ -64,6 +68,7 @@ function OpeningBalanceImport() {
   const [preview, setPreview] = useState<HistoricalImportPreview | null>(null)
   const [confirmResult, setConfirmResult] = useState<HistoricalImportConfirm | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [revisionReason, setRevisionReason] = useState('')
   const [cancelTarget, setCancelTarget] = useState<HistoricalImportSummary | null>(null)
 
   const historyQuery = useQuery({
@@ -107,10 +112,16 @@ function OpeningBalanceImport() {
   })
 
   const confirmMutation = useMutation({
-    mutationFn: () => confirmHistoricalImport(cooperativeId!, preview!.importId),
+    mutationFn: () =>
+      confirmHistoricalImport(
+        cooperativeId!,
+        preview!.importId,
+        preview?.revisionOfImportId ? revisionReason.trim() : undefined,
+      ),
     onSuccess: (data) => {
       setConfirmResult(data)
       setConfirmOpen(false)
+      setRevisionReason('')
       setPreview(null)
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -212,6 +223,19 @@ function OpeningBalanceImport() {
         label: t('historicalImport.fields.confirmedAt'),
         render: (row) =>
           row.confirmedAt ? dayjs(row.confirmedAt).format('YYYY-MM-DD HH:mm') : '—',
+        hideOnMobile: true,
+      },
+      {
+        id: 'revision',
+        label: t('historicalImport.fields.revision'),
+        render: (row) =>
+          row.status === 'SUPERSEDED'
+            ? t('historicalImport.revision.replacedOn', {
+                date: row.supersededAt ? dayjs(row.supersededAt).format('YYYY-MM-DD HH:mm') : '—',
+              })
+            : row.revisionOfImportId && row.revisionReason
+              ? t('historicalImport.revision.correction', { reason: row.revisionReason })
+              : '—',
         hideOnMobile: true,
       },
       {
@@ -476,7 +500,22 @@ function OpeningBalanceImport() {
               />
             </Box>
 
-            {preview.totalRows === 0 && (
+            {preview.revisionOfImportId ? (
+              <Alert severity="warning" data-testid="historical-import-revision">
+                {t('historicalImport.revision.banner', {
+                  filename: preview.revisionOfFilename ?? '—',
+                  date: preview.revisionOfConfirmedAt ? dayjs(preview.revisionOfConfirmedAt).format('YYYY-MM-DD HH:mm') : '—',
+                })}
+                {preview.unchangedLoans != null
+                  ? ` ${t('historicalImport.revision.loans', {
+                      kept: preview.unchangedLoans,
+                      replaced: preview.replacedLoans ?? 0,
+                    })}`
+                  : ''}
+              </Alert>
+            ) : null}
+
+            {preview.totalRows === 0 && !preview.unchangedLoans && (
               <Alert severity="info">{t('historicalImport.emptyWorkbook')}</Alert>
             )}
 
@@ -508,6 +547,11 @@ function OpeningBalanceImport() {
           </Stack>
         )}
 
+        {confirmResult?.membersLeftOutButKept && confirmResult.membersLeftOutButKept.length > 0 ? (
+          <Alert severity="info">
+            {t('historicalImport.revision.membersKept', { names: confirmResult.membersLeftOutButKept.join(', ') })}
+          </Alert>
+        ) : null}
         {confirmResult && (
           <Alert severity="success">
             <Typography variant="subtitle2">{t('historicalImport.confirmSummaryTitle')}</Typography>
@@ -556,14 +600,49 @@ function OpeningBalanceImport() {
         </Box>
       </Stack>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title={t('historicalImport.confirmTitle')}
-        message={t('historicalImport.confirmWarning', { date: formatDate(previewCutover) })}
-        loading={confirmMutation.isPending}
-        onConfirm={() => confirmMutation.mutate()}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      {preview?.revisionOfImportId ? (
+        <Dialog open={confirmOpen} onClose={() => !confirmMutation.isPending && setConfirmOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle>{t('historicalImport.revision.validateTitle')}</DialogTitle>
+          <DialogContent>
+            <Stack spacing={2} sx={{ pt: 1 }}>
+              <Alert severity="warning">
+                {t('historicalImport.revision.validateWarning', { date: formatDate(previewCutover) })}
+              </Alert>
+              <TextField
+                label={t('historicalImport.revision.reason')}
+                value={revisionReason}
+                onChange={(e) => setRevisionReason(e.target.value)}
+                helperText={t('historicalImport.revision.reasonHint')}
+                multiline
+                minRows={2}
+                slotProps={{ htmlInput: { maxLength: 500 } }}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setConfirmOpen(false)} disabled={confirmMutation.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="contained"
+              disabled={confirmMutation.isPending || revisionReason.trim().length < 10}
+              onClick={() => confirmMutation.mutate()}
+            >
+              {t('historicalImport.confirm')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      ) : (
+        <ConfirmDialog
+          open={confirmOpen}
+          title={t('historicalImport.confirmTitle')}
+          message={t('historicalImport.confirmWarning', { date: formatDate(previewCutover) })}
+          confirmLabel={t('historicalImport.confirm')}
+          loading={confirmMutation.isPending}
+          onConfirm={() => confirmMutation.mutate()}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
       <ConfirmDialog
         open={Boolean(cancelTarget)}
         title={t('historicalImport.cancelTitle')}

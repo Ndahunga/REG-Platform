@@ -24,6 +24,7 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import { ROUTES } from '@/shared/constants/routes'
 import { localizedApiError } from '@/shared/utils/localizedApiError'
 import { formatMoney } from '@/shared/utils/formatMoney'
+import { MemberFullDeletionDialog } from './MemberFullDeletionDialog'
 
 interface MemberRemovalDialogProps {
   cooperativeId: string
@@ -57,6 +58,7 @@ export function MemberRemovalDialog({
   const [forceDeactivate, setForceDeactivate] = useState(false)
   const [reason, setReason] = useState('')
   const [attempted, setAttempted] = useState(false)
+  const [fullDeletion, setFullDeletion] = useState(false)
 
   const eligibility = useQuery({
     queryKey: ['members', cooperativeId, userId, 'removal-eligibility'],
@@ -121,7 +123,19 @@ export function MemberRemovalDialog({
           : t('members.removal.blockedTitle')
 
   return (
-    <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="sm" aria-label={title}>
+    <>
+    <MemberFullDeletionDialog
+      cooperativeId={cooperativeId}
+      userId={userId}
+      memberName={memberName}
+      open={fullDeletion}
+      onClose={() => {
+        setFullDeletion(false)
+        onClose()
+      }}
+      leaveAfterDelete={leaveAfterDelete}
+    />
+    <Dialog open={open && !fullDeletion} onClose={busy ? undefined : onClose} fullWidth maxWidth="sm" aria-label={title}>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
@@ -182,6 +196,11 @@ export function MemberRemovalDialog({
         <Button onClick={onClose} disabled={busy}>
           {t('common.cancel')}
         </Button>
+        {e && !e.canDelete ? (
+          <Button color="error" onClick={() => setFullDeletion(true)} disabled={busy} data-testid="member-full-deletion-open">
+            {t('members.fullDeletion.open')}
+          </Button>
+        ) : null}
         {e && mode === 'delete' && e.canDeactivate ? (
           <Button onClick={() => setForceDeactivate(true)} disabled={busy}>
             {t('members.removal.deactivateInstead')}
@@ -212,5 +231,6 @@ export function MemberRemovalDialog({
         ) : null}
       </DialogActions>
     </Dialog>
+    </>
   )
 }

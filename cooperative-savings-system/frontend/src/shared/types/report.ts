@@ -2,9 +2,15 @@ export const STAFF_PRIMARY_REPORTS = [
   'CONTRIBUTIONS',
   'INVESTMENTS',
   'FULL_FINANCIAL',
+  'RECONCILIATION',
+  'MEMBER_POSITIONS',
 ] as const
 
-export const MEMBER_PRIMARY_REPORTS = ['CONTRIBUTIONS', 'LOANS', 'FINES'] as const
+export const MEMBER_PRIMARY_REPORTS = ['MEMBER_STATEMENT', 'CONTRIBUTIONS', 'LOANS', 'FINES'] as const
+
+/** Every report can be downloaded as a PDF (default) or an Excel workbook with the same rows. */
+export const REPORT_FORMATS = ['PDF', 'EXCEL'] as const
+export type ReportFormat = (typeof REPORT_FORMATS)[number]
 
 export const REPORT_TYPES = [
   'MEMBERS',
@@ -22,6 +28,15 @@ export const REPORT_TYPES = [
   'FINANCIAL_LEDGER',
   'AUDIT_LOGS',
   'FULL_FINANCIAL',
+  'MEMBER_STATEMENT',
+  'RECONCILIATION',
+  'COLLECTION_BY_MONTH',
+  'ROTATION_SCHEDULE',
+  'MEMBER_POSITIONS',
+  'ARREARS_AND_PENALTIES',
+  'LOAN_BOOK',
+  'INCOME_AND_EXPENSES',
+  'YEAR_END_CLOSE',
 ] as const
 
 export type ReportType = (typeof REPORT_TYPES)[number]
@@ -47,6 +62,7 @@ export interface ReportExportRequest {
   memberUserId?: string | null
   status?: string | null
   transactionType?: string | null
+  format?: ReportFormat | null
 }
 
 /** Public status only — never includes tokens or phone-number IDs. */

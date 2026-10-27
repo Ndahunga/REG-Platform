@@ -1226,6 +1226,22 @@
       "trialStarted": "Igihe cy'ubuntu cyatangijwe (kirangira {{ends}})",
       "noSubscription": "Nta kwiyandikisha kwatangijwe",
       "subscriptionStatus": "Imiterere y'iyiyandikisha"
+    },
+    "permanentDeletion": {
+      "open": "Siba burundu",
+      "title": "Siba ikimina burundu",
+      "warning": "Ibi bisiba burundu {{name}} n'amakuru yacyo yose: ibyanditswe by'abanyamuryango, imisanzu, inguzanyo, rotation, ibyinjijwe n'igenamiterere. Konti z'abanyamuryango batari mu kindi kimina nazo zirasibwa. Ntibishobora gusubizwa inyuma; inyandiko y'isiba n'igenzura biraguma.",
+      "impact": "Abanyamuryango {{members}}, konti {{accounts}} zisibwa, ibyanditswe {{rows}} bisibwa.",
+      "reason": "Kuki iki kimina gisibwa?",
+      "reasonHint": "Birakenewe, nibura inyuguti 10.",
+      "typeName": "Andika izina ry'ikimina \"{{name}}\" kugira ngo wemeze",
+      "confirm": "Siba ikimina burundu",
+      "done": "{{name}} cyasibwe",
+      "reasons": {
+        "CONFIRM_NAME_MISMATCH": "Andika neza izina ry'ikimina kugira ngo wemeze isiba.",
+        "REASON_REQUIRED": "Sobanura impamvu ikimina gisibwa (nibura inyuguti 10).",
+        "SCHEME_SHARES_RECORDS": "Hari ibyanditswe by'ikindi kimina bishingiye kuri iki; nta na kimwe cyasibwe."
+      }
     }
   },
   "members": {
@@ -1347,6 +1363,29 @@
         "PROTECTED_ACCOUNT": "Iyi konti ntishobora guhindurwa hano.",
         "REASON_REQUIRED": "Sobanura impamvu umunyamuryango ahagarikwa (nibura inyuguti 5).",
         "USE_MEMBER_DEACTIVATE": "Koresha igikorwa cyo gukuraho kugira ngo umunyamuryango ahagarikwe."
+      }
+    },
+    "fullDeletion": {
+      "open": "Siba umunyamuryango n'ibye byose",
+      "title": "Siba umunyamuryango n'ibyanditswe bye byose",
+      "warning": "Ibi bisiba burundu umunyamuryango n'ibye byose muri iki kimina: imisanzu, ubwishyu, inguzanyo, ibihano, imigabane, imibare y'intangiriro, intambwe za rotation n'imirongo y'ibitabo ibikomokaho. Bikoreshwe gusa ku byanditswe bitari bikwiye kuba bihari. Ntibishobora gusubizwa inyuma; isiba ribikwa mu igenzura.",
+      "impact": "Ibyanditswe {{count}} bizasibwa.",
+      "accountRemoved": "Konti y'umunyamuryango nayo izasibwa (ntari mu kindi kimina).",
+      "accountKept": "Konti y'umunyamuryango izaguma, kuko ari mu kindi kimina.",
+      "reason": "Kuki uyu munyamuryango asibwa?",
+      "reasonHint": "Birakenewe, nibura inyuguti 10.",
+      "typeUsername": "Andika izina ry'ukoresha {{username}} kugira ngo wemeze",
+      "confirm": "Siba burundu",
+      "done": "Umunyamuryango n'ibyanditswe bye byose byasibwe",
+      "reasons": {
+        "GENERIC": "Uyu munyamuryango ntashobora gusibwa burundu.",
+        "CANNOT_REMOVE_SELF": "Ntushobora kwisiba.",
+        "PROTECTED_ACCOUNT": "Umuyobozi wa platform ntashobora gusibwa hano.",
+        "MEMBER_ACTED_AS_OFFICER": "Uyu munyamuryango yanditse cyangwa yemeje ibyanditswe by'abandi nk'umuyobozi; kumusiba byasiga ibyo byanditswe bidasobanutse.",
+        "MEMBER_ONLY_RECIPIENT_OF_MONTH": "Uyu munyamuryango ni we wenyine uhabwa mu kwezi kwa rotation. Banza uhe iyo ntambwe undi munyamuryango.",
+        "MEMBER_RECORDS_SHARED": "Bimwe mu byanditswe by'uyu munyamuryango bifitanye isano n'ikindi kimina.",
+        "REASON_REQUIRED": "Sobanura impamvu umunyamuryango asibwa (nibura inyuguti 10).",
+        "CONFIRM_USERNAME_MISMATCH": "Andika neza izina ry'ukoresha ry'umunyamuryango kugira ngo wemeze."
       }
     }
   },
@@ -2242,7 +2281,12 @@
       "investmentsHint": "Manura PDF y'ishoramari ku gihe wahisemo.",
       "full": "Raporo yuzuye y'imari",
       "fullHint": "Manura PDF y'raporo yuzuye y'imari ku gihe wahisemo.",
-      "memberHint": "Manura PDF y'ibyawe ku gihe wahisemo."
+      "memberHint": "Manura PDF y'ibyawe ku gihe wahisemo.",
+      "hints": {
+        "MEMBER_STATEMENT": "Ibyo ufite, ibyo ugomba kwishyura, ibyo ugomba guhabwa n'igihe uzahabwa, ukwezi ku kwezi.",
+        "RECONCILIATION": "Ibyo ikimina gifite (banki, inguzanyo) bingana n'ibyo kigomba abanyamuryango? Itandukaniro, ikintu ku kindi.",
+        "MEMBER_POSITIONS": "Imari ya buri munyamuryango, umugabane w'inyungu, aho ahagaze muri rotation, inguzanyo, ibihano n'uko ahagaze muri rusange."
+      }
     },
     "tabs": {
       "reports": "Raporo",
@@ -2263,7 +2307,16 @@
       "PAYOUTS": "Kwishyura",
       "FINANCIAL_LEDGER": "Ibitabo by'imari",
       "AUDIT_LOGS": "Inyandiko z'isuzuma",
-      "FULL_FINANCIAL": "Raporo yuzuye y'imari"
+      "FULL_FINANCIAL": "Raporo yuzuye y'imari",
+      "MEMBER_STATEMENT": "Raporo y'umunyamuryango",
+      "RECONCILIATION": "Igereranya",
+      "COLLECTION_BY_MONTH": "Ibyakusanyijwe buri kwezi",
+      "ROTATION_SCHEDULE": "Gahunda ya rotation",
+      "MEMBER_POSITIONS": "Uko abanyamuryango bahagaze",
+      "ARREARS_AND_PENALTIES": "Ibirarane n'ibihano",
+      "LOAN_BOOK": "Igitabo cy'inguzanyo",
+      "INCOME_AND_EXPENSES": "Inyungu n'amafaranga yasohotse",
+      "YEAR_END_CLOSE": "Isoza ry'umwaka"
     },
     "export": {
       "title": "Manura raporo ya PDF",
@@ -2293,7 +2346,13 @@
         "futureTo": "Ntushobora gukora raporo irangira mu gihe kitageze.",
         "incompleteYearMonth": "Hitamo umwaka n'ukwezi, cyangwa usige byombi nk'uko biri.",
         "futureYearMonth": "Ntushobora gukora raporo y'ukwezi kutageze."
-      }
+      },
+      "format": "Ubwoko bwa dosiye",
+      "formats": {
+        "PDF": "PDF",
+        "EXCEL": "Excel"
+      },
+      "memberRequired": "Hitamo umunyamuryango ushaka raporo ye."
     },
     "whatsapp": {
       "share": "Sangira kuri WhatsApp",
@@ -3110,10 +3169,10 @@
     "countsSummary": "{{total}} byose · {{valid}} byemewe · {{invalid}} bitemewe",
     "fixAndReupload": "Kosora amakosa mu nyandiko hanyuma usubire kuyohereza.",
     "noErrors": "Nta makosa",
-    "confirm": "Emeza kwinjiza",
+    "confirm": "Emeza",
     "confirmTitle": "Emeza imibare y'intangiriro",
-    "confirmWarning": "Ibi bizandika imibare y'intangiriro y'iki kimina ku itariki ya {{date}}. Ntibishobora gusubirwamo kandi ntibiremera impano, kugura imigabane cyangwa kwishyura inguzanyo nk'ibikorwa bishya.",
-    "confirmSuccess": "Imibare y'intangiriro yinjijwe",
+    "confirmWarning": "Kwemeza byandika imibare y'intangiriro y'iki kimina ku itariki ya {{date}}. Ntibiremera impano, kugura imigabane cyangwa kwishyura inguzanyo nk'ibikorwa bishya. Nimubona ikosa nyuma, mwohereze dosiye ikosoye: izasimbura iyi, zombi zigumane mu mateka.",
+    "confirmSuccess": "Imibare y'intangiriro yemejwe",
     "confirmSummaryTitle": "Byuzuye",
     "confirmSummaryBody": "Imibare ku itariki ya {{date}} (amafaranga ahari {{funds}}): abanyamuryango bashya {{members}}, imibare y'intangiriro {{balances}}, imigabane {{shareBalances}}, inguzanyo {{loans}} zifite ibisigaye kwishyurwa {{installments}}.",
     "confirmTotals": "Amafaranga yatanzwe {{contributions}} · imigabane {{shares}} · amafaranga y'imigabane {{capital}} · inguzanyo zisigaye {{outstanding}}.",
@@ -3138,8 +3197,9 @@
       "uploadedAt": "Igihe",
       "status": "Imiterere",
       "counts": "Imirongo",
-      "confirmedAt": "Byemejwe",
-      "actions": "Ibikorwa"
+      "confirmedAt": "Byemejwe ku wa",
+      "actions": "Ibikorwa",
+      "revision": "Ikosora"
     },
     "status": {
       "UPLOADED": "Byoherejwe",
@@ -3148,7 +3208,8 @@
       "INVALID": "Bitemewe",
       "CONFIRMED": "Byemejwe",
       "CANCELLED": "Byahagaritswe",
-      "FAILED": "Byananiranye"
+      "FAILED": "Byananiranye",
+      "SUPERSEDED": "Byasimbuwe n'ikosora"
     },
     "openingFunds": "Amafaranga ikimina gifite ku itariki yo guhindura (RWF)",
     "openingFundsHelp": "Amafaranga ikimina gifite koko kuri iyo tariki.",
@@ -3198,7 +3259,11 @@
       "HISTORICAL_IMPORT_STALE": "Ikimina cyahindutse kuva iyi dosiye isuzumwe. Ohereza dosiye yakosowe.",
       "HISTORICAL_IMPORT_DUPLICATE_ROWS": "Bimwe muri ibi byabaye byinjijwe n'indi nyandiko hagati aho.",
       "HISTORICAL_IMPORT_POSTED": "Inyandiko yamaze kwandikwa ntishobora guhagarikwa.",
-      "HISTORICAL_ROW_TYPE_UNSUPPORTED": "Ubu bwoko bw'umurongo ntibushobora kwandikwa nk'amateka."
+      "HISTORICAL_ROW_TYPE_UNSUPPORTED": "Ubu bwoko bw'umurongo ntibushobora kwandikwa nk'amateka.",
+      "REVISION_REASON_REQUIRED": "Sobanura icyo iyi dosiye ikosoye ikosora (nibura inyuguti 10).",
+      "REVISION_OUTDATED": "Dosiye iri kosora ryari rigamije yamaze gusimburwa. Ongera wohereze dosiye ikosoye.",
+      "LOAN_HAS_ACTIVITY": "Inguzanyo iri kosora rikuraho cyangwa rihindura imaze kugira ibyayanditsweho nyuma yo kwinjizwa. Siga umurongo wayo uko wari uri, cyangwa ubanze uhindure ibyayanditsweho.",
+      "ROTATION_POSITIONS_WOULD_BE_LOST": "Bamwe mu banyamuryango batari muri dosiye ikosoye bafite imibare y'intambwe (rotation). Basige muri dosiye, cyangwa ubanze ukosore dosiye ya rotation."
     },
     "rowErrors": {
       "REQUIRED": "Iki gisabwa.",
@@ -3238,6 +3303,17 @@
       "MISSING_HEADER": "Urupapuro nta murongo w'imitwe rufite.",
       "BAD_HEADER": "Imitwe y'inkingi ntihura n'iy'inyandiko-shingiro.",
       "LOAN_SHEET_NOT_ACCEPTED": "Inguzanyo ntizinjizwa hamwe n'amafaranga y'intangiriro. Kuraho uru rupapuro maze winjize inguzanyo ukwazo."
+    },
+    "revision": {
+      "banner": "Iyi dosiye ikosora iyemejwe ku wa {{date}} ({{filename}}). Nimuyemeza, izasimbura iyo yoherejwe mbere, izaguma mu mateka nk'iyasimbuwe.",
+      "loans": "Inguzanyo {{kept}} ntizahindutse zizaguma uko ziri (n'ibyazanditsweho byose); inguzanyo {{replaced}} zizasimbuzwa.",
+      "validateTitle": "Emeza dosiye ikosoye",
+      "validateWarning": "Ibyo dosiye ya mbere yari yinjije bivanwamo, iyi ikajya mu mwanya wayo, ku itariki ya {{date}}. Ibyanditswe muri porogaramu nyuma biguma; niba kimwe muri byo gishingiye ku kintu iri kosora rikuraho, kwemeza birahagarara bikavuga icyo ari cyo.",
+      "reason": "Iri kosora rikosora iki?",
+      "reasonHint": "Birakenewe, nibura inyuguti 10. Bibikwa mu mateka no mu igenzura.",
+      "replacedOn": "Yasimbuwe ku wa {{date}}",
+      "correction": "Ikosora: {{reason}}",
+      "membersKept": "Ntibari muri dosiye ikosoye ariko bagumishijwe kuko hari ibyabanditsweho: {{names}}. Mubasibe ku rupapuro rw'umunyamuryango niba batagomba kuba mu kimina."
     }
   },
   "theme": {
@@ -4315,6 +4391,23 @@
     "download": "Kuramo ifishi",
     "upload": "Ohereza ifishi yujujwe",
     "result": "Abanyamuryango {{members}} bavuguruwe; ibyo ikimina kibereyemo abanyamuryango {{owed}} RWF; inyungu yo kugabana {{income}} RWF.",
-    "rotationResult": "Kuzunguruka: hishyuwe {{paid}}, hatanzwe {{received}}, bityo {{expected}} RWF yagombye kuba kuri konti (itandukaniro {{difference}})."
+    "rotationResult": "Kuzunguruka: hishyuwe {{paid}}, hatanzwe {{received}}, bityo {{expected}} RWF yagombye kuba kuri konti (itandukaniro {{difference}}).",
+    "revision": {
+      "notice": "Iyi dosiye yamaze kwinjizwa. Kongera kuyohereza ni ukuyikosora: verisiyo nshya isimbura iriho ubu, iyo ikaguma mu mateka ari hasi.",
+      "reason": "Iri kosora rikosora iki?",
+      "reasonHint": "Birakenewe mbere yo kohereza ikosora, nibura inyuguti 10.",
+      "upload": "Ohereza dosiye ikosoye",
+      "historyTitle": "Ibyoherejwe",
+      "version": "Verisiyo",
+      "file": "Dosiye",
+      "uploadedBy": "Yoherejwe na",
+      "uploadedAt": "Yoherejwe ku wa",
+      "status": "Imiterere",
+      "why": "Impamvu y'ikosora",
+      "statuses": {
+        "CURRENT": "Ikoreshwa ubu",
+        "SUPERSEDED": "Yasimbuwe"
+      }
+    }
   }
 }

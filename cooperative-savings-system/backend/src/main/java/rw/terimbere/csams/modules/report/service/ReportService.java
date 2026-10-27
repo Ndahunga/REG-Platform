@@ -138,6 +138,7 @@ public class ReportService {
     private final MemberContributionScheduleService memberContributionScheduleService;
     private final rw.terimbere.csams.modules.membership.repository.MemberOpeningBalanceRepository openingBalanceRepository;
     private final PlatformTransactionManager transactionManager;
+    private final StatementReportService statementReports;
 
     @Transactional(readOnly = true)
     public List<ReportTypeResponse> listTypes(UUID cooperativeId) {
@@ -201,7 +202,7 @@ public class ReportService {
             bytes = FullFinancialPdfWriter.write(model);
         } else {
             List<ReportSheetData> sheets = buildSheets(cooperativeId, type, request);
-            bytes = reportExporter.export(header, sheets);
+            bytes = exporter(type, request).export(header, sheets);
         }
 
         try {
@@ -235,10 +236,20 @@ public class ReportService {
                 + "_"
                 + request.getToDate()
                 + "."
-                + reportExporter.fileExtension();
+                + exporter(type, request).fileExtension();
 
-        return new ReportBinaryExport(bytes, reportExporter.contentType(), filename);
+        return new ReportBinaryExport(bytes, exporter(type, request).contentType(), filename);
     }
+
+    /** PDF by default; the same report as an Excel workbook when asked (not the full financial report, PDF only). */
+    private ReportExporter exporter(ReportType type, ReportExportRequest request) {
+        if (type != ReportType.FULL_FINANCIAL && "EXCEL".equalsIgnoreCase(request.getFormat())) {
+            return EXCEL;
+        }
+        return reportExporter;
+    }
+
+    private static final ReportExporter EXCEL = new rw.terimbere.csams.modules.report.export.ExcelReportExporter();
 
     private List<ReportSheetData> buildSheets(UUID cooperativeId, ReportType type, ReportExportRequest request) {
         return switch (type) {
@@ -258,6 +269,9 @@ public class ReportService {
             case AUDIT_LOGS -> List.of(auditSheet(cooperativeId, request));
             case FULL_FINANCIAL ->
                     throw new ValidationException("FULL_FINANCIAL uses the specialized assembler path");
+            case MEMBER_STATEMENT, RECONCILIATION, COLLECTION_BY_MONTH, ROTATION_SCHEDULE, MEMBER_POSITIONS,
+                    ARREARS_AND_PENALTIES, LOAN_BOOK, INCOME_AND_EXPENSES, YEAR_END_CLOSE ->
+                    statementReports.build(type, cooperativeId, request);
         };
     }
 

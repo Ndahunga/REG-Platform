@@ -76,10 +76,11 @@ export async function previewHistoricalImport(
 export async function confirmHistoricalImport(
   cooperativeId: string,
   importId: string,
+  reason?: string,
 ): Promise<HistoricalImportConfirm> {
   const response = await apiClient.post<ApiResponse<HistoricalImportConfirm>>(
     `/cooperatives/${cooperativeId}/historical-imports/${importId}/confirm`,
-    undefined,
+    reason ? { reason } : undefined,
     { timeout: LONG_TIMEOUT_MS },
   )
   return unwrapApiData(response.data)

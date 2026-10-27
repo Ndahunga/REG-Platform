@@ -47,6 +47,7 @@ import { formatMoney } from '@/shared/utils/formatMoney'
 import { AssignPresidentDialog } from '@/features/cooperatives/AssignPresidentDialog'
 import { CooperativeFormDialog } from '@/features/cooperatives/CooperativeFormDialog'
 import { OperatingModelClassifyDialog } from '@/features/cooperatives/OperatingModelClassifyDialog'
+import { SchemeDeletionDialog } from '@/features/cooperatives/SchemeDeletionDialog'
 import type { CooperativeCreateRequest } from '@/shared/types/cooperative'
 
 function statusColor(
@@ -87,6 +88,7 @@ export function CooperativeDetailPage() {
   const [statusTarget, setStatusTarget] = useState<CooperativeStatus | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [classifyOpen, setClassifyOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const canClassify = useAppSelector((s) => hasPermission(s.auth.user, 'COOPERATIVE_WRITE'))
 
   const query = useQuery({
@@ -365,6 +367,9 @@ export function CooperativeDetailPage() {
                   {t(`status.${next}`)}
                 </Button>
               ))}
+              <Button variant="outlined" color="error" size="small" onClick={() => setDeleteOpen(true)}>
+                {t('cooperatives.permanentDeletion.open')}
+              </Button>
             </Stack>
           </Paper>
 
@@ -420,6 +425,7 @@ export function CooperativeDetailPage() {
         onSubmit={(payload) => updateMutation.mutate(payload)}
       />
 
+      <SchemeDeletionDialog cooperativeId={id} open={deleteOpen} onClose={() => setDeleteOpen(false)} />
       <OperatingModelClassifyDialog
         open={classifyOpen}
         loading={classifyMutation.isPending}

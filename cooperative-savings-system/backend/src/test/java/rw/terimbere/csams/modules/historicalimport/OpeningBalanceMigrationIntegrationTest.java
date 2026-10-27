@@ -295,23 +295,25 @@ class OpeningBalanceMigrationIntegrationTest {
             List<HistoricalImportRow> rows = historicalImportRowRepository.findByImportIdOrderBySheetAscRowNumberAsc(id);
             assertThat(rows).isNotEmpty().allSatisfy(r -> assertThat(r.getResultingEntityId()).isNotNull());
         }
-        // a second loan file is refused: the loans outstanding at the cutover are imported once
+        // a second loan file is a correction of the first: it replaces it when validated (here only previewed)
         JsonNode secondLoans = previewOk(loanWorkbook(alice, bob).loan(alice, "END_OF_TERM", "50000", "2", "2026-08-01", "6", "", "", "")
                 .file("loans-again.xlsx"));
-        assertThat(secondLoans.path("status").asText()).isEqualTo("INVALID");
-        assertThat(secondLoans.path("errors").toString()).contains("LOANS_ALREADY_MIGRATED");
+        assertThat(secondLoans.path("status").asText()).as(secondLoans.path("errors").toString()).isEqualTo("READY");
+        assertThat(secondLoans.path("revisionOfImportId").asText()).isEqualTo(loanImportId.toString());
+        assertThat(secondLoans.path("unchangedLoans").asInt()).isZero();
+        assertThat(secondLoans.path("replacedLoans").asInt()).isEqualTo(2);
 
         // confirming again / uploading the same confirmed file again is refused
         mockMvc.perform(post(base(cooperativeId) + "/" + importId + "/confirm")
                         .header("Authorization", "Bearer " + superAdminToken))
                 .andExpect(status().is4xxClientError());
         mockMvc.perform(preview(upload, CUTOVER, superAdminToken)).andExpect(status().is4xxClientError());
-        // a re-exported workbook with different content (different hash) is stopped by the member-level protection
+        // a re-exported workbook with different content is a correction: checking it changes nothing until validated
         JsonNode again = previewOk(MigrationWorkbooks.create()
                 .member("Alice  Mukamana   Uwase", alice, alice + "@test.local", "0781234567", "", "850001")
                 .file("full-again.xlsx"));
-        assertThat(again.path("status").asText()).isEqualTo("INVALID");
-        assertThat(again.path("errors").toString()).contains("OPENING_BALANCE_EXISTS").contains("ALREADY_MIGRATED");
+        assertThat(again.path("status").asText()).as(again.path("errors").toString()).isEqualTo("READY");
+        assertThat(again.path("revisionOfImportId").asText()).isEqualTo(importId.toString());
         assertThat(openingBalanceRepository.findByCooperativeId(cooperativeId)).hasSize(2);
         assertThat(loanRepository.findByCooperativeId(cooperativeId, Pageable.unpaged()).getContent()).hasSize(2);
 
@@ -513,19 +515,31 @@ class OpeningBalanceMigrationIntegrationTest {
         assertThat(membership.getRoleInCooperative()).isEqualTo("ACCOUNTANT");
         assertThat(membership.getShareCount()).isEqualTo(2);
 
-        // a second, different workbook must not stack another opening balance on the same member
+        // a second, different workbook corrects the first: it replaces the opening balance instead of stacking one
         JsonNode second = previewOk(MigrationWorkbooks.create()
                 .member("Exist Ing", existing, existing + "@test.local", "0781234567", "", "999")
+                .shares(existing, "3", "30000")
                 .file("second.xlsx"));
-        assertThat(second.path("status").asText()).isEqualTo("INVALID");
-        assertError(second.path("errors"), "Member Registration", 2, "Username", "OPENING_BALANCE_EXISTS");
-        JsonNode secondShares = previewOk(MigrationWorkbooks.create().shares(existing, "1", "10").file("second-s.xlsx"));
-        assertError(secondShares.path("errors"), "Share Capital Registration", 2, "Username", "OPENING_BALANCE_EXISTS");
+        assertThat(second.path("status").asText()).as(second.path("errors").toString()).isEqualTo("READY");
         assertThat(openingBalanceRepository
                         .findByCooperativeIdAndMemberUserId(cooperativeId, existingUser.getId())
                         .orElseThrow()
                         .getOpeningContributionAmount())
+                .as("checking a correction changes nothing")
                 .isEqualByComparingTo("300");
+        mockMvc.perform(post(base(cooperativeId) + "/" + second.path("importId").asText() + "/confirm")
+                        .header("Authorization", "Bearer " + superAdminToken)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Contributions and shares were wrong\"}"))
+                .andExpect(status().isOk());
+        assertThat(openingBalanceRepository.findByCooperativeId(cooperativeId)).hasSize(1);
+        assertThat(openingBalanceRepository
+                        .findByCooperativeIdAndMemberUserId(cooperativeId, existingUser.getId())
+                        .orElseThrow()
+                        .getOpeningContributionAmount())
+                .isEqualByComparingTo("999");
+        assertThat(membershipRepository.findByCooperativeIdAndUserId(cooperativeId, existingUser.getId()).orElseThrow().getShareCount())
+                .as("the share count is the corrected one, not the sum").isEqualTo(3);
     }
 
     // ------------------------------------------------------------------ share validation

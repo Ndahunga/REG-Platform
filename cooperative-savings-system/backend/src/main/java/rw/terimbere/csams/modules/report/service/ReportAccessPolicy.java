@@ -20,7 +20,9 @@ public final class ReportAccessPolicy {
             ReportType.FINES,
             ReportType.FINE_PAYMENTS,
             ReportType.SOCIAL_FUND,
-            ReportType.PAYOUTS);
+            ReportType.PAYOUTS,
+            ReportType.MEMBER_STATEMENT,
+            ReportType.ROTATION_SCHEDULE);
 
     private ReportAccessPolicy() {}
 
@@ -49,10 +51,13 @@ public final class ReportAccessPolicy {
             case PAYOUTS -> principal.hasAuthority("PAYOUT_READ");
             case FINANCIAL_LEDGER -> principal.hasAuthority("LEDGER_READ");
             case AUDIT_LOGS -> principal.hasAuthority("AUDIT_READ");
-            case FULL_FINANCIAL ->
+            case FULL_FINANCIAL, RECONCILIATION, INCOME_AND_EXPENSES, YEAR_END_CLOSE ->
                     principal.hasAuthority("INCOME_EXPENSE_READ")
                             || CooperativeOfficerRoles.isLeadership(principal)
                             || principal.hasRole("ACCOUNTANT");
+            case MEMBER_STATEMENT, MEMBER_POSITIONS, ROTATION_SCHEDULE -> true;
+            case COLLECTION_BY_MONTH, ARREARS_AND_PENALTIES -> principal.hasAuthority("CONTRIBUTION_READ");
+            case LOAN_BOOK -> principal.hasAuthority("LOAN_READ");
         };
     }
 }

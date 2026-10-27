@@ -24,6 +24,7 @@ function toExportBody(payload: ReportExportRequest): Record<string, unknown> {
   if (payload.memberUserId) body.memberUserId = payload.memberUserId
   if (payload.status) body.status = payload.status
   if (payload.transactionType) body.transactionType = payload.transactionType
+  if (payload.format) body.format = payload.format
   return body
 }
 
@@ -50,7 +51,8 @@ export async function exportReport(
       responseType: 'blob',
       timeout: 120000,
       headers: {
-        Accept: 'application/pdf, application/json',
+        Accept:
+          'application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
       },
     },
   )

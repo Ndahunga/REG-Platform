@@ -56,6 +56,7 @@ class OpeningBalanceIntegrityIntegrationTest {
     @Autowired private SharePurchaseRepository sharePurchaseRepository;
     @Autowired private LoanRepository loanRepository;
     @Autowired private HistoricalImportRepository historicalImportRepository;
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private String token;
     private UUID cooperativeId;
@@ -319,18 +320,82 @@ class OpeningBalanceIntegrityIntegrationTest {
     }
 
     @Test
-    void aSecondMigrationIsRejected_soTheCutoverCashCannotBeCountedTwice() throws Exception {
-        confirm(preview(MigrationWorkbooks.create().member("First One", "one_" + id8(), "10").file("one.xlsx"), "800000")
+    void aSecondUploadCorrectsTheFirst_soTheCutoverCashIsCountedOnce() throws Exception {
+        String first = confirm(preview(MigrationWorkbooks.create().member("First One", "one_" + id8(), "10").file("one.xlsx"), "800000")
                 .path("importId")
-                .asText());
+                .asText()).path("importId").asText();
         JsonNode second = preview(MigrationWorkbooks.create().member("Second One", "two_" + id8(), "10").file("two.xlsx"), "500000");
-        assertThat(second.path("status").asText()).isEqualTo("INVALID");
-        assertThat(second.path("errors").toString()).contains("ALREADY_MIGRATED");
+        assertThat(second.path("status").asText()).as(second.path("errors").toString()).isEqualTo("READY");
+        assertThat(second.path("revisionOfImportId").asText()).isEqualTo(first);
+        // A correction needs the reason for it.
         mockMvc.perform(post(base() + "/" + second.path("importId").asText() + "/confirm")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().is4xxClientError());
         assertThat(historicalImportRepository.sumOpeningAvailableFunds(cooperativeId, HistoricalImportStatus.CONFIRMED))
                 .isEqualByComparingTo("800000");
+        mockMvc.perform(post(base() + "/" + second.path("importId").asText() + "/confirm")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"The bank balance and the member were wrong\"}"))
+                .andExpect(status().isOk());
+        // Only the corrected cash counts; the earlier upload stays on record, replaced.
+        assertThat(historicalImportRepository.sumOpeningAvailableFunds(cooperativeId, HistoricalImportStatus.CONFIRMED))
+                .isEqualByComparingTo("500000");
+        assertThat(historicalImportRepository.findById(UUID.fromString(first)).orElseThrow().getStatus())
+                .isEqualTo(HistoricalImportStatus.SUPERSEDED);
+        assertThat(historicalImportRepository.findById(UUID.fromString(first)).orElseThrow().getSupersededByImportId())
+                .isEqualTo(UUID.fromString(second.path("importId").asText()));
+    }
+
+    @Test
+    void aLoanCorrectionKeepsUnchangedLoansWithTheirRecords_andRefusesToDropALoanThatHasRecords() throws Exception {
+        String member = "rev_" + id8();
+        confirm(preview(MigrationWorkbooks.create().member("Rev Member", member, "100").shares(member, "2", "20000").file("rev.xlsx"), "500000")
+                .path("importId").asText());
+        JsonNode first = confirmLoans(MigrationWorkbooks.create()
+                .loan(member, "MONTHLY", "400000", "2", "2026-06-05", "10", "0", "400000", "")
+                .loan(member, "END_OF_TERM", "100000", "2", "2026-07-01", "6", "0", "100000", "")
+                .file("rev-loans.xlsx"));
+        UUID firstImport = UUID.fromString(first.path("importId").asText());
+        UUID kept = jdbc.queryForObject("select id from loans where opening_import_id = ? and principal_amount = 400000", UUID.class, firstImport);
+        UUID changed = jdbc.queryForObject("select id from loans where opening_import_id = ? and principal_amount = 100000", UUID.class, firstImport);
+        UUID memberId = jdbc.queryForObject("select id from users where username = ?", UUID.class, member);
+        // Something recorded in the app on the first loan since the import.
+        jdbc.update("insert into loan_guarantors (id, cooperative_id, loan_id, guarantor_user_id, guaranteed_amount, status, requested_by, requested_at)"
+                + " values (?, ?, ?, ?, 1000, 'ACCEPTED', ?, now())", UUID.randomUUID(), cooperativeId, kept, memberId, memberId);
+
+        JsonNode correction = previewLoans(MigrationWorkbooks.create()
+                .loan(member, "MONTHLY", "400000", "2", "2026-06-05", "10", "0", "400000", "")
+                .loan(member, "END_OF_TERM", "120000", "2", "2026-07-01", "6", "0", "120000", "")
+                .file("rev-loans-2.xlsx"));
+        assertThat(correction.path("status").asText()).as(correction.path("errors").toString()).isEqualTo("READY");
+        assertThat(correction.path("unchangedLoans").asInt()).isEqualTo(1);
+        assertThat(correction.path("replacedLoans").asInt()).isEqualTo(1);
+        mockMvc.perform(post(base() + "/" + correction.path("importId").asText() + "/confirm")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"The second loan was 120,000 not 100,000\"}"))
+                .andExpect(status().isOk());
+        UUID secondImport = UUID.fromString(correction.path("importId").asText());
+        assertThat(jdbc.queryForObject("select opening_import_id from loans where id = ?", UUID.class, kept))
+                .as("the unchanged loan stays, with what was recorded on it").isEqualTo(secondImport);
+        assertThat(jdbc.queryForObject("select count(*) from loan_guarantors where loan_id = ?", Long.class, kept)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("select count(*) from loans where id = ?", Long.class, changed)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from loans where opening_import_id = ? and principal_amount = 120000",
+                Long.class, secondImport)).isEqualTo(1L);
+        assertThat(historicalImportRepository.findById(firstImport).orElseThrow().getStatus()).isEqualTo(HistoricalImportStatus.SUPERSEDED);
+
+        // Dropping the loan that has records is refused, and nothing changes.
+        MvcResult refused = mockMvc.perform(multipart(base() + "/preview")
+                        .file(MigrationWorkbooks.create()
+                                .loan(member, "END_OF_TERM", "120000", "2", "2026-07-01", "6", "0", "120000", "")
+                                .file("rev-loans-3.xlsx"))
+                        .param("cutoverDate", CUTOVER)
+                        .header("Authorization", "Bearer " + token))
+                .andReturn();
+        assertThat(refused.getResponse().getStatus()).isBetween(400, 499);
+        assertThat(refused.getResponse().getContentAsString()).contains("LOAN_HAS_ACTIVITY");
+        assertThat(jdbc.queryForObject("select count(*) from loans where id = ?", Long.class, kept)).isEqualTo(1L);
     }
 
     // ------------------------------------------------------------------ helpers

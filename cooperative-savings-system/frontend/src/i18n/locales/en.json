@@ -1226,6 +1226,22 @@
       "trialStarted": "Free trial started (ends {{ends}})",
       "noSubscription": "No subscription initialized",
       "subscriptionStatus": "Subscription status"
+    },
+    "permanentDeletion": {
+      "open": "Delete permanently",
+      "title": "Delete scheme permanently",
+      "warning": "This deletes {{name}} and all its data for good: members' records, contributions, loans, rotation, imports and settings. Member accounts that belong to no other scheme are removed too. It cannot be undone; a deletion record and the audit trail stay.",
+      "impact": "{{members}} member(s), {{accounts}} account(s) removed, {{rows}} record(s) deleted.",
+      "reason": "Why is this scheme deleted?",
+      "reasonHint": "Required, at least 10 characters.",
+      "typeName": "Type the scheme name \"{{name}}\" to confirm",
+      "confirm": "Delete scheme for good",
+      "done": "{{name}} was deleted",
+      "reasons": {
+        "CONFIRM_NAME_MISMATCH": "Type the scheme's name exactly to confirm the deletion.",
+        "REASON_REQUIRED": "Explain why the scheme is deleted (at least 10 characters).",
+        "SCHEME_SHARES_RECORDS": "Records of another scheme depend on this one; nothing was deleted."
+      }
     }
   },
   "members": {
@@ -1347,6 +1363,29 @@
         "PROTECTED_ACCOUNT": "This account cannot be changed here.",
         "REASON_REQUIRED": "Explain why the member is being deactivated (at least 5 characters).",
         "USE_MEMBER_DEACTIVATE": "Use the remove action to make a member inactive."
+      }
+    },
+    "fullDeletion": {
+      "open": "Delete member and all records",
+      "title": "Delete member and all their records",
+      "warning": "This deletes the member and everything they have in this scheme for good: contributions, payments, loans, fines, shares, opening balances, rotation turns and the ledger lines that came from them. Use it only for records that should never have been there. It cannot be undone; the deletion is kept in the audit trail.",
+      "impact": "{{count}} record(s) will be deleted.",
+      "accountRemoved": "The member's account will be removed too (they belong to no other scheme).",
+      "accountKept": "The member's account stays, because they belong to another scheme.",
+      "reason": "Why is this member deleted?",
+      "reasonHint": "Required, at least 10 characters.",
+      "typeUsername": "Type the username {{username}} to confirm",
+      "confirm": "Delete for good",
+      "done": "Member and all their records deleted",
+      "reasons": {
+        "GENERIC": "This member cannot be fully deleted.",
+        "CANNOT_REMOVE_SELF": "You cannot delete yourself.",
+        "PROTECTED_ACCOUNT": "A platform administrator cannot be deleted here.",
+        "MEMBER_ACTED_AS_OFFICER": "This member recorded or approved other members' records as an officer; deleting them would leave those records unexplained.",
+        "MEMBER_ONLY_RECIPIENT_OF_MONTH": "This member is the only one paid in a rotation month. Give that turn to another member first.",
+        "MEMBER_RECORDS_SHARED": "Some of this member's records are linked to another scheme.",
+        "REASON_REQUIRED": "Explain why the member is deleted (at least 10 characters).",
+        "CONFIRM_USERNAME_MISMATCH": "Type the member's username exactly to confirm."
       }
     }
   },
@@ -2242,7 +2281,12 @@
       "investmentsHint": "Download a PDF of investments for the selected timeline.",
       "full": "Full financial report",
       "fullHint": "Download a PDF of the full financial summary for the selected timeline.",
-      "memberHint": "Download a PDF of your own records for the selected timeline."
+      "memberHint": "Download a PDF of your own records for the selected timeline.",
+      "hints": {
+        "MEMBER_STATEMENT": "What you own, what you owe, what you are owed and when you are paid, month by month.",
+        "RECONCILIATION": "Does what the scheme holds (bank, loans) equal what it owes members? The difference, item by item.",
+        "MEMBER_POSITIONS": "Every member's capital, income share, rotation position, loans, fines and net position."
+      }
     },
     "tabs": {
       "reports": "Reports",
@@ -2263,7 +2307,16 @@
       "PAYOUTS": "Payouts",
       "FINANCIAL_LEDGER": "Financial ledger",
       "AUDIT_LOGS": "Audit logs",
-      "FULL_FINANCIAL": "Full financial"
+      "FULL_FINANCIAL": "Full financial",
+      "MEMBER_STATEMENT": "Member statement",
+      "RECONCILIATION": "Reconciliation",
+      "COLLECTION_BY_MONTH": "Collection by month",
+      "ROTATION_SCHEDULE": "Rotation schedule",
+      "MEMBER_POSITIONS": "Member positions",
+      "ARREARS_AND_PENALTIES": "Arrears and penalties",
+      "LOAN_BOOK": "Loan book",
+      "INCOME_AND_EXPENSES": "Income and expenses",
+      "YEAR_END_CLOSE": "Year-end close"
     },
     "export": {
       "title": "Export PDF report",
@@ -2293,7 +2346,13 @@
         "futureTo": "You cannot generate a report that ends in the future.",
         "incompleteYearMonth": "Choose both year and month, or leave both as All.",
         "futureYearMonth": "You cannot generate a report for a future month."
-      }
+      },
+      "format": "File format",
+      "formats": {
+        "PDF": "PDF",
+        "EXCEL": "Excel"
+      },
+      "memberRequired": "Choose the member whose statement to export."
     },
     "whatsapp": {
       "share": "Share via WhatsApp",
@@ -3110,10 +3169,10 @@
     "countsSummary": "{{total}} total · {{valid}} valid · {{invalid}} invalid",
     "fixAndReupload": "Fix the errors in the workbook and upload it again.",
     "noErrors": "No validation errors",
-    "confirm": "Confirm Import",
-    "confirmTitle": "Confirm opening balances",
-    "confirmWarning": "This records opening balances as of {{date}} for this Saving Scheme. It cannot be undone and it does not create contribution, share purchase or loan payment transactions.",
-    "confirmSuccess": "Opening balances imported",
+    "confirm": "Validate",
+    "confirmTitle": "Validate opening balances",
+    "confirmWarning": "Validating records the opening balances as of {{date}} for this Saving Scheme. It does not create contribution, share purchase or loan payment transactions. If you find a mistake later, upload the corrected workbook: it replaces this one and both stay in the history.",
+    "confirmSuccess": "Opening balances validated",
     "confirmSummaryTitle": "Migration completed",
     "confirmSummaryBody": "Balances as of {{date}} (available funds {{funds}}): {{members}} new members, {{balances}} member opening balances, {{shareBalances}} share balances, {{loans}} loans with {{installments}} remaining instalments.",
     "confirmTotals": "Contributions {{contributions}} · {{shares}} shares · share capital {{capital}} · outstanding loan principal {{outstanding}}.",
@@ -3138,17 +3197,19 @@
       "uploadedAt": "Uploaded",
       "status": "Status",
       "counts": "Rows",
-      "confirmedAt": "Confirmed",
-      "actions": "Actions"
+      "confirmedAt": "Validated on",
+      "actions": "Actions",
+      "revision": "Correction"
     },
     "status": {
       "UPLOADED": "Uploaded",
       "VALIDATING": "Validating",
       "READY": "Ready",
       "INVALID": "Invalid",
-      "CONFIRMED": "Confirmed",
+      "CONFIRMED": "Validated",
       "CANCELLED": "Cancelled",
-      "FAILED": "Failed"
+      "FAILED": "Failed",
+      "SUPERSEDED": "Replaced by a correction"
     },
     "openingFunds": "Available Group Funds at Cutover (RWF)",
     "openingFundsHelp": "Actual funds available at the cutover date.",
@@ -3198,7 +3259,11 @@
       "HISTORICAL_IMPORT_STALE": "The scheme changed since this file was checked. Upload the corrected file again.",
       "HISTORICAL_IMPORT_DUPLICATE_ROWS": "Some of these events were imported by another batch in the meantime.",
       "HISTORICAL_IMPORT_POSTED": "A posted import is final and cannot be cancelled.",
-      "HISTORICAL_ROW_TYPE_UNSUPPORTED": "This kind of row cannot be posted as history."
+      "HISTORICAL_ROW_TYPE_UNSUPPORTED": "This kind of row cannot be posted as history.",
+      "REVISION_REASON_REQUIRED": "Explain what this corrected upload fixes (at least 10 characters).",
+      "REVISION_OUTDATED": "The upload this corrects was already replaced. Upload the corrected workbook again.",
+      "LOAN_HAS_ACTIVITY": "A loan this correction removes or changes already has records since the import. Keep that loan's row exactly as it was, or reverse what was recorded on it first.",
+      "ROTATION_POSITIONS_WOULD_BE_LOST": "Some members missing from the corrected workbook have rotation positions. Keep them in it, or correct the rotation workbook first."
     },
     "rowErrors": {
       "REQUIRED": "This value is required.",
@@ -3238,6 +3303,17 @@
       "MISSING_HEADER": "The sheet has no header row.",
       "BAD_HEADER": "The column headings do not match the template.",
       "LOAN_SHEET_NOT_ACCEPTED": "Loans are not imported with the opening balances. Remove this sheet and import the loans separately."
+    },
+    "revision": {
+      "banner": "This workbook corrects the one validated on {{date}} ({{filename}}). When you validate it, it replaces that upload, which stays in the history as replaced.",
+      "loans": "{{kept}} loan(s) are identical and stay as they are (with anything recorded on them); {{replaced}} loan(s) are replaced.",
+      "validateTitle": "Validate the corrected workbook",
+      "validateWarning": "The earlier upload is undone and this one takes its place, as of {{date}}. Records made in the app since then are kept; if one depends on something this correction removes, validation stops and says what.",
+      "reason": "What does this correction fix?",
+      "reasonHint": "Required, at least 10 characters. Kept in the history and the audit trail.",
+      "replacedOn": "Replaced on {{date}}",
+      "correction": "Correction: {{reason}}",
+      "membersKept": "Left out of the corrected workbook but kept because records exist for them: {{names}}. Delete them from the member page if they should not be in the scheme."
     }
   },
   "theme": {
@@ -4315,6 +4391,23 @@
     "download": "Download template",
     "upload": "Upload filled workbook",
     "result": "{{members}} members updated; owed to members {{owed}} RWF; income to share {{income}} RWF.",
-    "rotationResult": "Rotation: paid in {{paid}}, paid out {{received}}, so {{expected}} RWF should be in the bank (difference {{difference}})."
+    "rotationResult": "Rotation: paid in {{paid}}, paid out {{received}}, so {{expected}} RWF should be in the bank (difference {{difference}}).",
+    "revision": {
+      "notice": "This workbook was already imported. Uploading it again corrects it: the new version replaces the current one, which stays in the history below.",
+      "reason": "What does this correction fix?",
+      "reasonHint": "Required before uploading a correction, at least 10 characters.",
+      "upload": "Upload corrected workbook",
+      "historyTitle": "Uploads",
+      "version": "Version",
+      "file": "File",
+      "uploadedBy": "Uploaded by",
+      "uploadedAt": "Uploaded on",
+      "status": "Status",
+      "why": "Reason for correction",
+      "statuses": {
+        "CURRENT": "Current",
+        "SUPERSEDED": "Replaced"
+      }
+    }
   }
 }

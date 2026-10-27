@@ -91,11 +91,35 @@ export async function downloadOpeningWorkbookTemplate(cooperativeId: string): Pr
   URL.revokeObjectURL(url)
 }
 
-export async function importOpeningWorkbook(cooperativeId: string, file: File): Promise<OpeningWorkbookResult> {
+export async function importOpeningWorkbook(
+  cooperativeId: string,
+  file: File,
+  reason?: string,
+): Promise<OpeningWorkbookResult> {
   const form = new FormData()
   form.append('file', file)
+  if (reason) form.append('reason', reason)
   const response = await apiClient.post<ApiResponse<OpeningWorkbookResult>>(`${base(cooperativeId)}/opening-workbook`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+  return unwrapApiData(response.data)
+}
+
+/** One upload of the rotation and positions workbook: the current one, or one a correction replaced. */
+export interface OpeningWorkbookUpload {
+  id: string
+  version: number
+  status: 'CURRENT' | 'SUPERSEDED' | string
+  originalFilename?: string | null
+  uploadedBy?: string | null
+  uploadedByName?: string | null
+  uploadedAt?: string | null
+  revisionReason?: string | null
+  supersededAt?: string | null
+  summary?: string | null
+}
+
+export async function fetchOpeningWorkbookHistory(cooperativeId: string): Promise<OpeningWorkbookUpload[]> {
+  const response = await apiClient.get<ApiResponse<OpeningWorkbookUpload[]>>(`${base(cooperativeId)}/opening-workbook/history`)
   return unwrapApiData(response.data)
 }

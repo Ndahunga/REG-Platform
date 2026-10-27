@@ -220,7 +220,7 @@ describe('HistoricalImportPage (opening-balance migration)', { timeout: 15_000 }
     // the retired sections are gone
     expect(screen.queryByText(/Fund reconciliation/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Historical years in this workbook/i)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirm Import' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Validate' })).toBeEnabled()
   })
 
   it('lists row errors with sheet, row, column and message and keeps confirm disabled', async () => {
@@ -264,7 +264,7 @@ describe('HistoricalImportPage (opening-balance migration)', { timeout: 15_000 }
     expect(screen.getByText('Last Payment Date')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText(/Fix the errors in the workbook/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Confirm Import' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled()
   })
 
   it('shows a Kinyarwanda user the translated reason for a refused import, never the backend English', async () => {
@@ -314,14 +314,15 @@ describe('HistoricalImportPage (opening-balance migration)', { timeout: 15_000 }
       fireEvent.click(await screen.findByRole('button', { name: 'Preview Import' }))
     })
     await act(async () => {
-      fireEvent.click(await screen.findByRole('button', { name: 'Confirm Import' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Validate' }))
     })
     expect(await screen.findByText(/does not create contribution, share purchase or loan payment/i)).toBeInTheDocument()
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /^Confirm$/i }))
+      const buttons = screen.getAllByRole('button', { name: 'Validate' })
+      fireEvent.click(buttons[buttons.length - 1])
     })
 
-    await waitFor(() => expect(confirmMock).toHaveBeenCalledWith('coop-1', 'imp-1'))
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledWith('coop-1', 'imp-1', undefined))
     expect(await screen.findByText('Migration completed')).toBeInTheDocument()
     expect(screen.getByText(/11 remaining instalments/i)).toBeInTheDocument()
   })

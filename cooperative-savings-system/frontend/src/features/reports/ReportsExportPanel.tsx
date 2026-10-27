@@ -29,14 +29,16 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import { useCooperativeSubscription } from '@/features/subscription/useCooperativeSubscription'
 import { LEDGER_TRANSACTION_TYPES } from '@/shared/types/ledger'
 import { memberDisplayName } from '@/shared/types/member'
-import { MEMBER_PRIMARY_REPORTS, STAFF_PRIMARY_REPORTS } from '@/shared/types/report'
+import { MEMBER_PRIMARY_REPORTS, STAFF_PRIMARY_REPORTS, type ReportFormat } from '@/shared/types/report'
 import {
   defaultExportFilename,
   defaultReportFromDate,
   defaultReportToDate,
   isReportStatusValidFor,
   isValidReportWhatsAppRecipient,
+  reportRequiresMember,
   reportStatusOptions,
+  reportSupportsExcel,
   reportSupportsFromTo,
   reportSupportsMember,
   reportSupportsStatus,
@@ -67,6 +69,7 @@ export function ReportsExportPanel({
   const [memberUserId, setMemberUserId] = useState('')
   const [status, setStatus] = useState('')
   const [transactionType, setTransactionType] = useState('')
+  const [format, setFormat] = useState<ReportFormat>('PDF')
   const [shareOpen, setShareOpen] = useState(false)
   const [shareType, setShareType] = useState('')
   const [shareIncludeFilters, setShareIncludeFilters] = useState(false)
@@ -131,8 +134,13 @@ export function ReportsExportPanel({
   const timelineIssue = validateReportTimeline(fromDate, toDate, today)
   const timelineValid = timelineIssue == null
 
+  const memberMissing = Boolean(reportType) && !selfScoped && reportRequiresMember(reportType) && !memberUserId
+  const formatFor = (type: string, includeFilters: boolean): ReportFormat =>
+    includeFilters && reportSupportsExcel(type) ? format : 'PDF'
+
   const buildExportPayload = (type: string, includeFilters: boolean) => ({
     reportType: type,
+    format: formatFor(type, includeFilters),
     fromDate,
     toDate,
     memberUserId: includeFilters && showMember && memberUserId ? memberUserId : null,
@@ -152,7 +160,7 @@ export function ReportsExportPanel({
       return exportReport(
         cooperativeId,
         buildExportPayload(type, includeFilters),
-        defaultExportFilename(type),
+        defaultExportFilename(type, formatFor(type, includeFilters)),
       )
     },
     onSuccess: ({ filename }) => {
@@ -226,13 +234,16 @@ export function ReportsExportPanel({
     .map((type) => ({
       type,
       titleKey: reportTypeLabelKey(type),
-      descriptionKey: selfScoped
-        ? `reports.primary.memberHint`
-        : type === 'CONTRIBUTIONS'
-          ? 'reports.primary.contributionsHint'
-          : type === 'INVESTMENTS'
-            ? 'reports.primary.investmentsHint'
-            : 'reports.primary.fullHint',
+      descriptionKey:
+        type === 'MEMBER_STATEMENT' || type === 'RECONCILIATION' || type === 'MEMBER_POSITIONS'
+          ? `reports.primary.hints.${type}`
+          : selfScoped
+            ? `reports.primary.memberHint`
+            : type === 'CONTRIBUTIONS'
+              ? 'reports.primary.contributionsHint'
+              : type === 'INVESTMENTS'
+                ? 'reports.primary.investmentsHint'
+                : 'reports.primary.fullHint',
     }))
 
   const runPrimary = (type: string) => {
@@ -428,7 +439,7 @@ export function ReportsExportPanel({
         }}
         onSubmit={(event) => {
           event.preventDefault()
-          if (!reportType || !timelineValid) return
+          if (!reportType || !timelineValid || memberMissing) return
           exportMutation.mutate({ type: reportType, includeFilters: true })
         }}
       >
@@ -469,13 +480,16 @@ export function ReportsExportPanel({
             label={t('reports.export.member')}
             value={memberUserId}
             onChange={(e) => setMemberUserId(e.target.value)}
+            required={reportRequiresMember(reportType)}
+            error={memberMissing}
+            helperText={memberMissing ? t('reports.export.memberRequired') : ' '}
             fullWidth
             slotProps={allFilterSelect((id) => {
               const member = (membersQuery.data?.content ?? []).find((m) => m.userId === id)
               return member ? memberDisplayName(member) : undefined
             })}
           >
-            <MenuItem value="">{t('common.all')}</MenuItem>
+            {reportRequiresMember(reportType) ? null : <MenuItem value="">{t('common.all')}</MenuItem>}
             {(membersQuery.data?.content ?? []).map((member) => (
               <MenuItem key={member.userId} value={member.userId}>
                 {memberDisplayName(member)}
@@ -523,11 +537,24 @@ export function ReportsExportPanel({
           </TextField>
         ) : null}
 
+        {reportType && reportSupportsExcel(reportType) ? (
+          <TextField
+            select
+            label={t('reports.export.format')}
+            value={format}
+            onChange={(e) => setFormat(e.target.value as ReportFormat)}
+            fullWidth
+          >
+            <MenuItem value="PDF">{t('reports.export.formats.PDF')}</MenuItem>
+            <MenuItem value="EXCEL">{t('reports.export.formats.EXCEL')}</MenuItem>
+          </TextField>
+        ) : null}
+
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
           <Button
             type="submit"
             variant="contained"
-            disabled={!reportType || !timelineValid || actionsBusy}
+            disabled={!reportType || !timelineValid || actionsBusy || memberMissing}
           >
             {exportMutation.isPending
               ? t('reports.export.exporting')

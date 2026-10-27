@@ -6,6 +6,8 @@ export type HistoricalImportStatus =
   | 'CONFIRMED'
   | 'CANCELLED'
   | 'FAILED'
+  /** Replaced by a corrected upload; kept as the record of what was imported before. */
+  | 'SUPERSEDED'
 
 /** OPENING_BALANCE = the cutover migration; LEGACY = read-only history of the retired 16-sheet import. */
 export type HistoricalImportFormat = 'OPENING_BALANCE' | 'LEGACY'
@@ -89,6 +91,8 @@ export interface HistoricalMigrationLoans {
 }
 
 export interface HistoricalImportConfirm {
+  /** Correction of an earlier upload: members it left out that were kept because records exist for them. */
+  membersLeftOutButKept?: string[] | null
   importId: string
   status: HistoricalImportStatus | string
   cutoverDate?: string | null
@@ -138,6 +142,14 @@ export interface HistoricalImportPreview {
   /** Legacy imports only. */
   reconciliation?: HistoricalReconciliationSummary | null
   errorSummary?: string | null
+  /** Set when this upload corrects an earlier validated one, which it replaces once validated. */
+  revisionOfImportId?: string | null
+  revisionOfFilename?: string | null
+  revisionOfConfirmedAt?: string | null
+  /** Loans identical in both versions, kept as they are. */
+  unchangedLoans?: number | null
+  /** Loans of the earlier version this one removes or changes. */
+  replacedLoans?: number | null
 }
 
 export interface HistoricalImportSummary {
@@ -158,6 +170,11 @@ export interface HistoricalImportSummary {
   confirmedAt?: string | null
   cancelledAt?: string | null
   errorSummary?: string | null
+  confirmedBy?: string | null
+  revisionOfImportId?: string | null
+  supersededByImportId?: string | null
+  supersededAt?: string | null
+  revisionReason?: string | null
 }
 
 export function canCancelHistoricalImport(status?: string | null): boolean {

@@ -30,6 +30,9 @@ public class ReportExportRequest {
 
     private UUID memberUserId;
 
+    /** PDF (default) or EXCEL: the same rows, with the same title and logo. */
+    private String format;
+
     private String status;
 
     private LedgerTransactionType transactionType;

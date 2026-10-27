@@ -13,6 +13,7 @@ export type ChipColor =
   | 'warning'
 
 const MEMBER_TYPES = new Set([
+  'MEMBER_STATEMENT',
   'CONTRIBUTIONS',
   'SPECIAL_CONTRIBUTIONS',
   'LOANS',
@@ -138,6 +139,7 @@ export function importStatusColor(status: string): ChipColor {
     case 'CONFIRMED':
       return 'success'
     case 'CANCELLED':
+    case 'SUPERSEDED':
       return 'secondary'
     case 'FAILED':
       return 'error'
@@ -171,14 +173,24 @@ export function isValidReportWhatsAppRecipient(raw: string): boolean {
   return isValidRwandanPhone(raw)
 }
 
-export function defaultExportFilename(reportType: string): string {
+/** Reports that cover one member and cannot run for "all". */
+export function reportRequiresMember(type: string): boolean {
+  return type === 'MEMBER_STATEMENT'
+}
+
+/** The full financial report is a dedicated PDF; every other report also downloads as Excel. */
+export function reportSupportsExcel(type: string): boolean {
+  return type !== 'FULL_FINANCIAL'
+}
+
+export function defaultExportFilename(reportType: string, format: string = 'PDF'): string {
   const safe = reportType
     .toLowerCase()
     .replace(/_/g, '-')
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
-  return `${safe || 'report'}.pdf`
+  return `${safe || 'report'}.${format === 'EXCEL' ? 'xlsx' : 'pdf'}`
 }
 
 export type ReportTimelineIssue =
