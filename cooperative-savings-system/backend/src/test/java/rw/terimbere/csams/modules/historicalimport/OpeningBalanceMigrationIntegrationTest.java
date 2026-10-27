@@ -300,8 +300,8 @@ class OpeningBalanceMigrationIntegrationTest {
                 .file("loans-again.xlsx"));
         assertThat(secondLoans.path("status").asText()).as(secondLoans.path("errors").toString()).isEqualTo("READY");
         assertThat(secondLoans.path("revisionOfImportId").asText()).isEqualTo(loanImportId.toString());
-        assertThat(secondLoans.path("unchangedLoans").asInt()).isZero();
-        assertThat(secondLoans.path("replacedLoans").asInt()).isEqualTo(2);
+        assertThat(secondLoans.path("unchangedLoans").asInt()).as("the two loans already imported are identical").isEqualTo(2);
+        assertThat(secondLoans.path("replacedLoans").asInt()).isZero();
 
         // confirming again / uploading the same confirmed file again is refused
         mockMvc.perform(post(base(cooperativeId) + "/" + importId + "/confirm")
