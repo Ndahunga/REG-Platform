@@ -163,9 +163,10 @@ class PermanentDeletionIntegrationTest {
         var now = positionService.compute(p.id(), today).members().stream()
                 .filter(m -> m.memberUserId().equals(p.payer.id())).findFirst().orElseThrow();
         var before = positionService.compute(p.id(), today.minusDays(1)).members().stream()
-                .filter(m -> m.memberUserId().equals(p.payer.id())).findFirst().orElseThrow();
+                .filter(m -> m.memberUserId().equals(p.payer.id())).findFirst();
         assertThat(now.capital()).isEqualByComparingTo("1000");
-        assertThat(before.capital()).isEqualByComparingTo("0");
+        // The member joined today: as at yesterday there is no capital (and no membership yet).
+        assertThat(before.map(m -> m.capital()).orElse(java.math.BigDecimal.ZERO)).isEqualByComparingTo("0");
         // A member exports their own statement.
         MvcResult mine = mockMvc.perform(post(p.base() + "/reports/export")
                         .header("Authorization", PaymentScenario.bearer(p.payer))
