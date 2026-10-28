@@ -99,8 +99,7 @@ public final class StatementMatcher {
         }
         scored.sort(Comparator.comparingInt(Scored::score).reversed());
         Scored best = scored.get(0);
-        int second = scored.size() > 1 ? scored.get(1).score() : Integer.MIN_VALUE;
-        boolean clear = best.score() - second >= 10;
+        boolean clear = scored.size() == 1 || best.score() - scored.get(1).score() >= 10;
         if (best.referenceHit() && clear) {
             return new Verdict("MATCHED", best);
         }

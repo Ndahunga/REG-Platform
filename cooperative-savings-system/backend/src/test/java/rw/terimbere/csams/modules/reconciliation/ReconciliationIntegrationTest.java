@@ -69,7 +69,7 @@ class ReconciliationIntegrationTest {
         assertThat(status(uploaded)).as(uploaded.getResponse().getContentAsString()).isEqualTo(200);
         assertThat(p.data(uploaded).path("lineCount").asInt()).isEqualTo(3);
         MvcResult again = upload(p, p.reviewer, csv);
-        assertThat(status(again)).isEqualTo(409);
+        assertThat(status(again)).isEqualTo(422);
 
         String base = p.base() + "/reconciliation";
         JsonNode overview = p.data(mockMvc.perform(get(base).header("Authorization", bearer(secretary))).andReturn());
@@ -88,7 +88,7 @@ class ReconciliationIntegrationTest {
         assertThat(p.data(confirmed).path("status").asText()).isEqualTo("EXPLAINED");
 
         MvcResult noNote = postAs(p.verifier, base + "/lines/" + unknown + "/explain", Map.of("category", "OTHER"));
-        assertThat(status(noNote)).isEqualTo(409);
+        assertThat(status(noNote)).isEqualTo(422);
         MvcResult explained = postAs(p.verifier, base + "/lines/" + unknown + "/explain",
                 Map.of("category", "NOT_SCHEME_MONEY", "note", "Deposited by mistake, returned to the sender"));
         assertThat(p.data(explained).path("status").asText()).isEqualTo("EXPLAINED");
@@ -102,7 +102,7 @@ class ReconciliationIntegrationTest {
         assertThat(results.get(0).path("outcome").asText()).as(results.toString()).isEqualTo("VERIFIED");
         assertThat(jdbc.queryForObject("select status from member_payments where id = ?", String.class, payment)).isEqualTo("VERIFIED");
         UUID matchedLine = jdbc.queryForObject("select line_id from bank_statement_matches where payment_id = ?", UUID.class, payment);
-        assertThat(status(postAs(p.verifier, base + "/lines/" + matchedLine + "/undo", null))).isEqualTo(409);
+        assertThat(status(postAs(p.verifier, base + "/lines/" + matchedLine + "/undo", null))).isEqualTo(422);
         assertThat(p.count("select count(*) from audit_logs where action = 'RECONCILIATION_DECISION'")).isPositive();
     }
 
