@@ -725,8 +725,8 @@ class PaymentPostingIntegrationTest {
                 .interestAmount(new BigDecimal(interest))
                 .outstandingPrincipal(new BigDecimal(principal))
                 .outstandingInterest(new BigDecimal(interest))
-                .requestDate(today.minusMonths(1))
-                .disbursementDate(today.minusMonths(1))
+                .requestDate(today.minusMonths(6))
+                .disbursementDate(today.minusMonths(6))
                 .dueDate(today.plusMonths(5))
                 .status(LoanStatus.ACTIVE)
                 .build());

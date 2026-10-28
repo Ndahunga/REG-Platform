@@ -410,13 +410,14 @@ class OpeningBalanceMigrationIntegrationTest {
                                 {"amount": 30000, "paymentDate": "2026-10-12", "paymentReference": "LIVE-1"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.interestPortion").value(18000.0))
-                .andExpect(jsonPath("$.data.principalPortion").value(12000.0));
+                // interest only for the months used so far (6 of the 9): 12,000; the rest goes to the principal
+                .andExpect(jsonPath("$.data.interestPortion").value(12000.0))
+                .andExpect(jsonPath("$.data.principalPortion").value(18000.0));
         mockMvc.perform(get("/api/v1/cooperatives/" + cooperativeId + "/loans/" + endOfTermLoan)
                         .header("Authorization", "Bearer " + superAdminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.outstandingPrincipal").value(88000.0))
-                .andExpect(jsonPath("$.data.outstandingInterest").value(0.0));
+                .andExpect(jsonPath("$.data.outstandingPrincipal").value(82000.0))
+                .andExpect(jsonPath("$.data.outstandingInterest").value(6000.0));
         assertThat(loanRepaymentRepository.findAll().stream().filter(r -> cooperativeId.equals(r.getCooperativeId())))
                 .hasSize(1);
         // cash: 800,000 + 1,000 contribution + 18,000 interest + 12,000 principal repaid; value only +1,000
