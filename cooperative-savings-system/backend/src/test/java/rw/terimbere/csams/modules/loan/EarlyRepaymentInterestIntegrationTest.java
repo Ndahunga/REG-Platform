@@ -56,7 +56,8 @@ class EarlyRepaymentInterestIntegrationTest {
     @Test
     void repayingAfterTwoMonthsAndADayChargesThreeMonthsAndClosesTheLoan() throws Exception {
         PaymentScenario p = new PaymentScenario(mockMvc, objectMapper, jdbc, loanRepository, "ACCUMULATING", 1);
-        LocalDate today = LocalDate.now(PaymentScenario.KIGALI);
+        // yesterday, so the date is never "in the future" whatever time zone the server runs in
+        LocalDate today = LocalDate.now(PaymentScenario.KIGALI).minusDays(1);
         Loan loan = loanRepository.saveAndFlush(Loan.builder()
                 .cooperativeId(p.id())
                 .memberUserId(p.payer.id())
@@ -76,7 +77,7 @@ class EarlyRepaymentInterestIntegrationTest {
                 .build());
         String path = p.base() + "/loans/" + loan.getId();
 
-        JsonNode quote = p.data(mockMvc.perform(get(path + "/settlement").header("Authorization", bearer(p.reviewer))).andReturn());
+        JsonNode quote = p.data(mockMvc.perform(get(path + "/settlement").param("date", today.toString()).header("Authorization", bearer(p.reviewer))).andReturn());
         assertThat(quote.path("monthsCharged").asInt()).isEqualTo(3);
         assertThat(quote.path("interestToPay").decimalValue()).isEqualByComparingTo("30000");
         assertThat(quote.path("total").decimalValue()).isEqualByComparingTo("530000");
