@@ -764,14 +764,13 @@ public class LoanService {
                             .build());
                 }
             }
-            // a loan repaid in one go at the end (one instalment) only owes the interest earned so far; an instalment
-            // schedule keeps paying each instalment as scheduled
+            // a payment never takes interest of months not yet used: paying ahead goes to the principal
             split = LoanScheduleAllocator.allocatePayment(
                     installments,
                     MoneyUtils.scale(amount),
                     LoanAllocationOrder.parse(loan.getAllocationOrder()),
                     today(),
-                    settles || installments.size() > 1 ? null : interestCap);
+                    settles ? null : interestCap);
             principalPortion = split.principalPortion();
             interestPortion = split.interestPortion();
             penaltyPortion = split.penaltyPortion();

@@ -342,29 +342,32 @@ class LoanScheduleAllocationIntegrationTest {
         freezeClock(LocalDate.of(2026, 1, 15));
         UUID loanId = createApproveDisburse("300000.0000", 5);
 
+        // paid on the day of disbursement: only the first month's interest is owed so far, the rest goes to principal
         repay(loanId, "80000.0000")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.interestPortion").value(12000.0))
-                .andExpect(jsonPath("$.data.principalPortion").value(68000.0));
+                .andExpect(jsonPath("$.data.interestPortion").value(6000.0))
+                .andExpect(jsonPath("$.data.principalPortion").value(74000.0));
 
         List<LoanRepaymentAllocation> lines = allocationRepository.findByLoanIdOrderByCreatedAtAsc(loanId);
-        assertThat(lines).hasSize(4);
+        assertThat(lines).hasSize(3);
         assertThat(lines.stream()
                         .filter(line -> line.getComponent() == LoanRepaymentComponent.INTEREST)
                         .map(LoanRepaymentAllocation::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add))
-                .isEqualByComparingTo("12000.00");
+                .isEqualByComparingTo("6000.00");
 
         mockMvc.perform(get("/api/v1/cooperatives/" + cooperativeId + "/loans/" + loanId)
                         .header("Authorization", "Bearer " + superAdminToken))
                 .andExpect(jsonPath("$.data.repaymentSchedule[0].status").value("PAID"))
                 .andExpect(jsonPath("$.data.repaymentSchedule[1].status").value("PARTIALLY_PAID"))
-                .andExpect(jsonPath("$.data.outstandingPrincipal").value(232000.0))
-                .andExpect(jsonPath("$.data.outstandingInterest").value(18000.0));
+                .andExpect(jsonPath("$.data.outstandingPrincipal").value(226000.0))
+                .andExpect(jsonPath("$.data.outstandingInterest").value(24000.0));
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             repay(loanId, "62500.0000").andExpect(status().isOk());
         }
+        // settling in the first month: the rest of the principal, no further interest; 24,000 is not owed
+        repay(loanId, "38500.0000").andExpect(status().isOk()).andExpect(jsonPath("$.data.interestWaived").value(24000.0));
 
         mockMvc.perform(get("/api/v1/cooperatives/" + cooperativeId + "/loans/" + loanId)
                         .header("Authorization", "Bearer " + superAdminToken))
@@ -372,7 +375,7 @@ class LoanScheduleAllocationIntegrationTest {
                 .andExpect(jsonPath("$.data.outstandingPrincipal").value(0.0))
                 .andExpect(jsonPath("$.data.outstandingInterest").value(0.0))
                 .andExpect(jsonPath("$.data.totalRepaidPrincipal").value(300000.0))
-                .andExpect(jsonPath("$.data.totalRepaidInterest").value(30000.0));
+                .andExpect(jsonPath("$.data.totalRepaidInterest").value(6000.0));
     }
 
     @Test
