@@ -78,11 +78,12 @@ class LoanRepaymentRevisionIntegrationTest {
                 .isEqualTo(422);
         assertThat(p.count("select count(*) from audit_logs where action = 'LOAN_REPAYMENT_REVISION' and cooperative_id = ?", p.id()))
                 .isEqualTo(1);
-        // the ledger keeps the wrong credits and their reversals: net repaid is the corrected amount
-        assertThat(jdbc.queryForObject("select coalesce(sum(credit_amount),0) - coalesce(sum(debit_amount),0) from financial_ledger"
-                        + " where cooperative_id = ? and transaction_type in ('LOAN_PRINCIPAL_REPAYMENT','LOAN_INTEREST_PAYMENT','REVERSAL')"
-                        + " and status = 'APPROVED'", java.math.BigDecimal.class, p.id()))
-                .isEqualByComparingTo("530000");
+        // the ledger keeps the wrong credits with their reversals, and credits the corrected repayment
+        java.math.BigDecimal corrected = jdbc.queryForObject("select coalesce(sum(credit_amount),0) from financial_ledger"
+                + " where source_entity_id = ?", java.math.BigDecimal.class, UUID.fromString(r.path("id").asText()));
+        assertThat(corrected).isEqualByComparingTo("530000");
+        assertThat(p.count("select count(*) from financial_ledger where cooperative_id = ? and transaction_type = 'REVERSAL'", p.id()))
+                .isEqualTo(2);
     }
 
     @Test

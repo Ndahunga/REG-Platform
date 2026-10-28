@@ -31,3 +31,11 @@ export function caretAfterGrouping(typed: string, caret: number, grouped: string
   }
   return grouped.length
 }
+
+/** A stored amount shown in a field: "2500.0000" -> "2,500", "2500.5000" -> "2,500.5". */
+export function displayMoney(text: string | number | null | undefined): string {
+  const plain = plainMoney(text)
+  if (!plain.includes('.')) return groupedMoney(plain)
+  const trimmed = plain.replace(/0+$/, '').replace(/\.$/, '')
+  return groupedMoney(trimmed)
+}

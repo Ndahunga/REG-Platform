@@ -164,12 +164,11 @@ describe('HistoricalImportPage (opening-balance migration)', { timeout: 15_000 }
 
     setCutover('2026-09-30')
     expect(previewButton).toBeDisabled() // cutover cash is also required
-    setFunds('800,000')
+    setFunds('800.123')
     expect(previewButton).toBeDisabled()
     expect(screen.getByText(/at most two decimals/i)).toBeInTheDocument()
-    setFunds('-5')
-    expect(previewButton).toBeDisabled()
     setFunds('800000')
+    expect(screen.getByLabelText(/Available Group Funds at Cutover/i)).toHaveValue('800,000')
     expect(previewButton).toBeEnabled()
     await act(async () => {
       fireEvent.click(previewButton)

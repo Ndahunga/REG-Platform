@@ -56,9 +56,6 @@ describe('MemberContributionSubmitPanel validation', () => {
   it.each([
     ['0', 'Enter a valid amount'],
     ['0.001', 'Enter a valid amount'],
-    ['-5', 'Enter a valid amount'],
-    ['abc', 'Enter a valid amount'],
-    ['1e3', 'Enter a valid amount'],
     ['1.23456', 'Enter a valid amount'],
   ])('rejects the amount "%s" and makes no API call', async (value, message) => {
     const user = userEvent.setup()
@@ -67,6 +64,12 @@ describe('MemberContributionSubmitPanel validation', () => {
     await user.click(submit())
     expect(await screen.findByText(message)).toBeInTheDocument()
     expect(submitRegularContribution).not.toHaveBeenCalled()
+  })
+
+  it('only takes digits and shows thousand separators', async () => {
+    await ready()
+    fireEvent.change(amount(), { target: { value: '-5abc000' } })
+    expect(amount()).toHaveValue('5,000')
   })
 
   it('rejects a missing amount', async () => {

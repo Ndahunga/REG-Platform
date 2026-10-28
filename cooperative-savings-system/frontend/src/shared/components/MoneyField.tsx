@@ -1,6 +1,6 @@
 import { TextField, type TextFieldProps } from '@mui/material'
 import { useCallback, useLayoutEffect, useRef, type ChangeEvent, type Ref } from 'react'
-import { caretAfterGrouping, groupedMoney, plainMoney } from '@/shared/utils/moneyInput'
+import { caretAfterGrouping, displayMoney, groupedMoney, plainMoney } from '@/shared/utils/moneyInput'
 
 type InputElement = HTMLInputElement | HTMLTextAreaElement
 
@@ -47,7 +47,7 @@ export function MoneyField(props: TextFieldProps & { ref?: Ref<unknown> }) {
               return plainMoney(el.value)
             },
             set value(v: string) {
-              el.value = groupedMoney(v)
+              el.value = displayMoney(v)
             },
             type: 'text',
             get name() {
@@ -94,11 +94,18 @@ export function MoneyField(props: TextFieldProps & { ref?: Ref<unknown> }) {
     onChange?.(e)
   }
 
+  // While typing, the field keeps what was typed (grouped); a value set from outside is shown tidily.
+  const typed = element.current?.value
+  const shown = controlled
+    ? typed !== undefined && plainMoney(typed) === plainMoney(value as string | number | null)
+      ? groupedMoney(typed)
+      : displayMoney(value as string | number | null)
+    : undefined
   const htmlInput = (slotProps?.htmlInput ?? {}) as Record<string, unknown>
   return (
     <TextField
       {...rest}
-      value={controlled ? groupedMoney(value as string | number | null) : undefined}
+      value={shown}
       onChange={handleChange}
       inputRef={formRef}
       slotProps={{ ...slotProps, htmlInput: { inputMode: 'decimal', autoComplete: 'off', ...htmlInput } }}

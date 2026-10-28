@@ -150,10 +150,7 @@ describe('MonthlyEntryPanel batch validation', () => {
   }
 
   it.each([
-    ['abc', 'Enter a valid amount with at most 4 decimals.'],
-    ['1e3', 'Enter a valid amount with at most 4 decimals.'],
     ['12.34567', 'Enter a valid amount with at most 4 decimals.'],
-    ['-5', 'Paid amounts must be zero or greater.'],
     ['9999999999999999', 'Amount is too large.'],
   ])('rejects the amount "%s" and makes no API call', async (value, message) => {
     const user = userEvent.setup()
@@ -186,7 +183,7 @@ describe('MonthlyEntryPanel batch validation', () => {
     const user = userEvent.setup()
     await ready()
     fireEvent.change(amountOf('Alice Uwase'), { target: { value: '5000' } }) // valid row
-    fireEvent.change(amountOf('Bob Mugisha'), { target: { value: 'oops' } }) // invalid row
+    fireEvent.change(amountOf('Bob Mugisha'), { target: { value: '12.34567' } }) // invalid row
 
     await user.click(saveButton())
     const summary = await screen.findByTestId('contribution-validation-summary')
@@ -200,17 +197,17 @@ describe('MonthlyEntryPanel batch validation', () => {
     const user = userEvent.setup()
     await ready()
     fireEvent.change(amountOf('Alice Uwase'), { target: { value: '5000' } })
-    fireEvent.change(amountOf('Bob Mugisha'), { target: { value: 'oops' } })
+    fireEvent.change(amountOf('Bob Mugisha'), { target: { value: '12.34567' } })
     await user.click(saveButton())
     await waitFor(() => expect(amountOf('Bob Mugisha')).toHaveFocus())
-    expect(amountOf('Alice Uwase')).toHaveValue('5000')
-    expect(amountOf('Bob Mugisha')).toHaveValue('oops')
+    expect(amountOf('Alice Uwase')).toHaveValue('5,000')
+    expect(amountOf('Bob Mugisha')).toHaveValue('12.34567')
   })
 
   it('clears a row error as soon as the row is fixed', async () => {
     const user = userEvent.setup()
     await ready()
-    fireEvent.change(amountOf('Alice Uwase'), { target: { value: 'bad' } })
+    fireEvent.change(amountOf('Alice Uwase'), { target: { value: '12.34567' } })
     await user.click(saveButton())
     expect(await screen.findByTestId('contribution-validation-summary')).toBeInTheDocument()
 
@@ -424,7 +421,7 @@ describe('MonthlyEntryPanel saves changed rows only', () => {
   it('an invalid changed row still blocks the submission and names the member', async () => {
     const user = userEvent.setup()
     await open(five)
-    fireEvent.change(amountOf('Diana Uwera'), { target: { value: 'abc' } })
+    fireEvent.change(amountOf('Diana Uwera'), { target: { value: '12.34567' } })
     await user.click(saveButton())
     expect(await screen.findByTestId('contribution-validation-summary')).toHaveTextContent('Diana Uwera')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -462,7 +459,7 @@ describe('MonthlyEntryPanel saves changed rows only', () => {
     expect(await screen.findByText('No changes to save')).toBeInTheDocument()
     expect(saveContributionPeriod).toHaveBeenCalledTimes(1)
     // the grid now shows the server's saved value
-    expect(amountOf('Diana Uwera')).toHaveValue('2500.0000')
+    expect(amountOf('Diana Uwera')).toHaveValue('2,500')
   })
 
   it('a saved row is clean even if the refetch returns the very same rows', async () => {
