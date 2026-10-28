@@ -1767,7 +1767,11 @@
       "revisedChip": "Revised",
       "reversedChip": "Reversed",
       "correctionChip": "Correction",
-      "correctionOf": "Replaces {{amount}}: {{reason}}"
+      "correctionOf": "Replaces {{amount}}: {{reason}}",
+      "settlement": "To repay in full on {{date}}: {{total}} (principal {{principal}} + interest for {{months}} month(s) {{interest}}).",
+      "settlementWaived": "The interest of the months not used ({{amount}}) is not owed.",
+      "useSettlement": "Use this amount",
+      "interestWaived": "Repaid early: {{amount}} interest of unused months not charged"
     },
     "schedule": {
       "title": "Repayment schedule",

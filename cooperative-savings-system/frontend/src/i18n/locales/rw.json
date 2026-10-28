@@ -1767,7 +1767,11 @@
       "revisedChip": "Bwakosowe",
       "reversedChip": "Bwasubijwe",
       "correctionChip": "Ikosora",
-      "correctionOf": "Isimbura {{amount}}: {{reason}}"
+      "correctionOf": "Isimbura {{amount}}: {{reason}}",
+      "settlement": "Kwishyura byose ku wa {{date}}: {{total}} (inguzanyo {{principal}} + inyungu y'amezi {{months}} {{interest}}).",
+      "settlementWaived": "Inyungu y'amezi atakoreshejwe ({{amount}}) ntisabwa.",
+      "useSettlement": "Koresha aya mafaranga",
+      "interestWaived": "Yishyuwe kare: inyungu {{amount}} y'amezi atakoreshejwe ntiyabazwe"
     },
     "schedule": {
       "title": "Gahunda yo kwishyura",

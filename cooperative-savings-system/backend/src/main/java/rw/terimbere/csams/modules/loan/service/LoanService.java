@@ -67,6 +67,7 @@ import rw.terimbere.csams.modules.loan.repository.LoanShareTierRepository;
 import rw.terimbere.csams.modules.loan.support.LoanOverdueRules;
 import rw.terimbere.csams.modules.loanrepayment.entity.LoanRepayment;
 import rw.terimbere.csams.modules.loanrepayment.entity.LoanRepaymentAllocation;
+import rw.terimbere.csams.modules.loanrepayment.entity.LoanInterestWaiver;
 import rw.terimbere.csams.modules.loanrepayment.repository.LoanRepaymentAllocationRepository;
 import rw.terimbere.csams.modules.loanrepayment.repository.LoanRepaymentRepository;
 import rw.terimbere.csams.modules.membership.entity.CooperativeMembership;
@@ -104,6 +105,7 @@ public class LoanService {
     private final LoanInstallmentRepository loanInstallmentRepository;
     private final LoanRepaymentRepository loanRepaymentRepository;
     private final LoanRepaymentAllocationRepository loanRepaymentAllocationRepository;
+    private final rw.terimbere.csams.modules.loanrepayment.repository.LoanInterestWaiverRepository loanInterestWaiverRepository;
     private final LoanSettingsService loanSettingsService;
     private final LoanPenaltyService loanPenaltyService;
     private final FineService fineService;
@@ -725,27 +727,71 @@ public class LoanService {
         BigDecimal penaltyPortion = BigDecimal.ZERO.setScale(MoneyUtils.STORAGE_SCALE);
         LoanScheduleAllocator.PaymentSplit split = null;
         List<LoanInstallment> installments = List.of();
-        if (isScheduleBased(loan) && loanInstallmentRepository.existsByLoanId(loan.getId())) {
+        boolean scheduled = isScheduleBased(loan) && loanInstallmentRepository.existsByLoanId(loan.getId());
+
+        // Interest only for the months the money was used: repaying early never pays the interest of unused months.
+        EarlyRepaymentInterest.Settlement settlement = EarlyRepaymentInterest.settlement(
+                loan, paymentDate, outstandingPrincipal, outstandingInterest, outstandingPenalty, scheduled);
+        boolean early = settlement.interestWaived().signum() > 0;
+        if (early && MoneyUtils.scale(amount).compareTo(settlement.total()) > 0) {
+            throw new BusinessException(
+                    "REPAYMENT_EXCEEDS_SETTLEMENT",
+                    "Repaying this loan in full on " + paymentDate + " takes " + settlement.total() + " (principal "
+                            + settlement.principal() + " + interest for " + settlement.monthsCharged() + " month(s) "
+                            + settlement.interestToPay() + "); the interest of the months not used is not owed");
+        }
+        boolean settles = early && MoneyUtils.scale(amount).compareTo(settlement.total()) == 0;
+        BigDecimal interestCap = early ? settlement.interestToPay() : null;
+        BigDecimal waived = MoneyUtils.scaleForStorage(settles ? settlement.interestWaived() : BigDecimal.ZERO);
+        List<LoanInterestWaiver> waivers = new ArrayList<>();
+
+        if (scheduled) {
             installments = loanInstallmentRepository.findByLoanIdOrderByInstallmentNumberAsc(loan.getId());
+            if (settles) {
+                // the interest of the unused months comes off the last instalments first
+                BigDecimal left = waived;
+                for (int i = installments.size() - 1; i >= 0 && left.signum() > 0; i--) {
+                    LoanInstallment installment = installments.get(i);
+                    BigDecimal take = installment.remainingInterest().min(left);
+                    if (take.signum() <= 0) continue;
+                    installment.setInterestDue(MoneyUtils.scaleForStorage(installment.getInterestDue().subtract(take)));
+                    left = left.subtract(take);
+                    waivers.add(LoanInterestWaiver.builder()
+                            .installmentId(installment.getId())
+                            .loanId(loan.getId())
+                            .cooperativeId(loan.getCooperativeId())
+                            .amount(MoneyUtils.scaleForStorage(take))
+                            .build());
+                }
+            }
             split = LoanScheduleAllocator.allocatePayment(
                     installments,
                     MoneyUtils.scale(amount),
                     LoanAllocationOrder.parse(loan.getAllocationOrder()),
-                    today());
+                    today(),
+                    settles ? null : interestCap);
             principalPortion = split.principalPortion();
             interestPortion = split.interestPortion();
             penaltyPortion = split.penaltyPortion();
             loanInstallmentRepository.saveAll(installments);
         } else {
             BigDecimal remaining = amount;
+            BigDecimal interestDueNow = interestCap == null ? outstandingInterest : interestCap.min(outstandingInterest);
             if (interestFirst) {
-                interestPortion = remaining.min(outstandingInterest);
+                interestPortion = remaining.min(interestDueNow);
                 remaining = remaining.subtract(interestPortion);
                 principalPortion = remaining.min(outstandingPrincipal);
             } else {
                 principalPortion = remaining.min(outstandingPrincipal);
                 remaining = remaining.subtract(principalPortion);
-                interestPortion = remaining.min(outstandingInterest);
+                interestPortion = remaining.min(interestDueNow);
+            }
+            if (settles) {
+                waivers.add(LoanInterestWaiver.builder()
+                        .loanId(loan.getId())
+                        .cooperativeId(loan.getCooperativeId())
+                        .amount(waived)
+                        .build());
             }
             interestPortion = MoneyUtils.scaleForStorage(interestPortion);
             principalPortion = MoneyUtils.scaleForStorage(principalPortion);
@@ -767,14 +813,22 @@ public class LoanService {
                 .recordedBy(actorId)
                 .revisionOfId(revisionOfId)
                 .revisionReason(revisionReason)
+                .interestWaived(waived)
                 .build();
         repayment = loanRepaymentRepository.save(repayment);
         persistAllocations(repayment, split);
+        for (LoanInterestWaiver waiver : waivers) {
+            waiver.setRepaymentId(repayment.getId());
+        }
+        loanInterestWaiverRepository.saveAll(waivers);
+        if (waived.signum() > 0 && loan.getInterestAmount() != null) {
+            loan.setInterestAmount(MoneyUtils.scaleForStorage(loan.getInterestAmount().subtract(waived)));
+        }
 
         loan.setOutstandingPrincipal(
                 MoneyUtils.scaleForStorage(outstandingPrincipal.subtract(principalPortion)));
         loan.setOutstandingInterest(
-                MoneyUtils.scaleForStorage(outstandingInterest.subtract(interestPortion)));
+                MoneyUtils.scaleForStorage(outstandingInterest.subtract(interestPortion).subtract(waived)));
         loan.setOutstandingPenalty(
                 MoneyUtils.scaleForStorage(outstandingPenalty.subtract(penaltyPortion)));
         loan.setTotalRepaidPrincipal(MoneyUtils.scaleForStorage(
@@ -910,6 +964,19 @@ public class LoanService {
         return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\"";
     }
 
+    /** What repaying the whole loan on {@code date} (default today) takes: interest only for the months used. */
+    @Transactional(readOnly = true)
+    public EarlyRepaymentInterest.Settlement settlementQuote(UUID cooperativeId, UUID loanId, LocalDate date) {
+        requireCooperative(cooperativeId);
+        authorizationService.requireMembership(cooperativeId);
+        Loan loan = requireLoan(cooperativeId, loanId);
+        requireLoanReadAccess(loan);
+        boolean scheduled = isScheduleBased(loan) && loanInstallmentRepository.existsByLoanId(loan.getId());
+        return EarlyRepaymentInterest.settlement(
+                loan, date == null ? today() : date, loan.getOutstandingPrincipal(), loan.getOutstandingInterest(),
+                loan.getOutstandingPenalty(), scheduled);
+    }
+
     @Transactional(readOnly = true)
     public List<LoanRepaymentResponse> listRepayments(UUID cooperativeId, UUID loanId) {
         requireCooperative(cooperativeId);
@@ -1009,10 +1076,19 @@ public class LoanService {
 
         // the instalments this repayment paid are reopened exactly as it paid them
         List<LoanRepaymentAllocation> paid = loanRepaymentAllocationRepository.findByRepaymentIdOrderByCreatedAtAsc(repayment.getId());
-        if (!paid.isEmpty()) {
+        List<LoanInterestWaiver> waivers = loanInterestWaiverRepository.findByRepaymentId(repayment.getId());
+        BigDecimal waived = MoneyUtils.scaleForStorage(nz(repayment.getInterestWaived()));
+        if (!paid.isEmpty() || waivers.stream().anyMatch(w -> w.getInstallmentId() != null)) {
             Map<UUID, LoanInstallment> installments = new HashMap<>();
             for (LoanInstallment i : loanInstallmentRepository.findByLoanIdOrderByInstallmentNumberAsc(loan.getId())) {
                 installments.put(i.getId(), i);
+            }
+            // the interest of unused months it waived is owed again
+            for (LoanInterestWaiver w : waivers) {
+                LoanInstallment installment = w.getInstallmentId() == null ? null : installments.get(w.getInstallmentId());
+                if (installment != null) {
+                    installment.setInterestDue(MoneyUtils.scaleForStorage(nz(installment.getInterestDue()).add(w.getAmount())));
+                }
             }
             for (LoanRepaymentAllocation a : paid) {
                 LoanInstallment installment = installments.get(a.getInstallmentId());
@@ -1033,7 +1109,10 @@ public class LoanService {
         }
 
         loan.setOutstandingPrincipal(principalAfter);
-        loan.setOutstandingInterest(MoneyUtils.scaleForStorage(interestBefore.add(interest)));
+        loan.setOutstandingInterest(MoneyUtils.scaleForStorage(interestBefore.add(interest).add(waived)));
+        if (waived.signum() > 0 && loan.getInterestAmount() != null) {
+            loan.setInterestAmount(MoneyUtils.scaleForStorage(loan.getInterestAmount().add(waived)));
+        }
         loan.setOutstandingPenalty(penaltyBefore);
         loan.setTotalRepaidPrincipal(MoneyUtils.scaleForStorage(repaidPrincipal.subtract(principal)));
         loan.setTotalRepaidInterest(MoneyUtils.scaleForStorage(repaidInterest.subtract(interest)));
@@ -1902,6 +1981,7 @@ public class LoanService {
                 .reversedAt(repayment.getReversedAt())
                 .revisionOfId(repayment.getRevisionOfId())
                 .revisionReason(repayment.getRevisionReason())
+                .interestWaived(MoneyUtils.scale(repayment.getInterestWaived() == null ? BigDecimal.ZERO : repayment.getInterestWaived()))
                 .build();
     }
 

@@ -19,6 +19,7 @@ import type {
   LoanRepayment,
   LoanRepaymentCreateRequest,
   LoanRepaymentReviseRequest,
+  LoanSettlement,
   LoanRepaymentPreviewRequest,
   LoanSchedulePreview,
 } from '@/shared/types/loan'
@@ -200,6 +201,18 @@ export async function fetchLoanRepayments(
   const data = unwrapApiData(response.data)
   const list = Array.isArray(data) ? data : (data.content ?? [])
   return list.map(mapLoanRepayment)
+}
+
+export async function fetchLoanSettlement(
+  cooperativeId: string,
+  loanId: string,
+  date?: string,
+): Promise<LoanSettlement> {
+  const response = await apiClient.get<ApiResponse<LoanSettlement>>(
+    `/cooperatives/${cooperativeId}/loans/${loanId}/settlement`,
+    { params: date ? { date } : undefined },
+  )
+  return unwrapApiData(response.data)
 }
 
 export async function reviseLoanRepayment(

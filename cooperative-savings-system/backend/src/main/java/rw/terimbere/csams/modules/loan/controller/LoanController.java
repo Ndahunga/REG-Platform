@@ -210,6 +210,16 @@ public class LoanController {
                 ApiResponse.ok(loanService.reviseRepayment(cooperativeId, loanId, repaymentId, request, httpRequest)));
     }
 
+    @GetMapping("/{loanId}/settlement")
+    @PreAuthorize("hasAuthority('LOAN_READ')")
+    @Operation(summary = "What repaying the whole loan on a date takes: interest only for the months used (a started month counts whole)")
+    public ResponseEntity<ApiResponse<rw.terimbere.csams.modules.loan.service.EarlyRepaymentInterest.Settlement>> settlement(
+            @PathVariable UUID cooperativeId,
+            @PathVariable UUID loanId,
+            @RequestParam(name = "date", required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        return ResponseEntity.ok(ApiResponse.ok(loanService.settlementQuote(cooperativeId, loanId, date)));
+    }
+
     @GetMapping("/{loanId}/repayments")
     @PreAuthorize("hasAuthority('LOAN_READ')")
     @Operation(summary = "List repayments for a loan")

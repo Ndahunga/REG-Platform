@@ -78,3 +78,27 @@ describe('RepaymentDialog validation', () => {
     expect(submit()).toBeDisabled()
   })
 })
+
+describe('RepaymentDialog early settlement', () => {
+  it('shows what repaying in full takes and fills it in', async () => {
+    const user = userEvent.setup()
+    const settlementFor = vi.fn().mockResolvedValue({
+      asOf: todayInKigaliIso(),
+      monthsCharged: 3,
+      interestEarned: '30000',
+      interestPaid: '0',
+      interestToPay: '30000',
+      principal: '500000',
+      penalty: '0',
+      total: '530000',
+      interestWaived: '20000',
+    })
+    renderDialog({ settlementFor })
+    const quote = await screen.findByTestId('loan-settlement')
+    expect(quote).toHaveTextContent(/3 month/)
+    expect(quote).toHaveTextContent(/530,000/)
+    expect(quote).toHaveTextContent(/20,000/)
+    await user.click(screen.getByRole('button', { name: 'Use this amount' }))
+    expect(amount()).toHaveValue('530,000')
+  })
+})

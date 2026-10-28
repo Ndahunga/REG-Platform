@@ -48,24 +48,27 @@ class LoanRepaymentRevisionIntegrationTest {
         assertThat(status(recorded)).as(recorded.getResponse().getContentAsString()).isEqualTo(200);
         UUID wrong = UUID.fromString(p.data(recorded).path("id").asText());
 
-        assertThat(status(postAs(p.payer, base + "/" + wrong + "/revise", Map.of("amount", "530000", "reason", "Typed 53,000 instead of 530,000"))))
+        assertThat(status(postAs(p.payer, base + "/" + wrong + "/revise", Map.of("amount", "510000", "reason", "Typed 53,000 instead of 510,000"))))
                 .isEqualTo(403);
         assertThat(status(postAs(p.reviewer, base + "/" + wrong + "/revise", Map.of("amount", "530000", "reason", "no"))))
                 .isEqualTo(400);
 
-        MvcResult revised = postAs(p.verifier, base + "/" + wrong + "/revise", Map.of("amount", "530000", "reason", "Typed 53,000 instead of 530,000"));
+        // disbursed a month ago: settling now is the principal + one month of interest (10,000)
+        MvcResult revised = postAs(p.verifier, base + "/" + wrong + "/revise", Map.of("amount", "510000", "reason", "Typed 53,000 instead of 510,000"));
         assertThat(status(revised)).as(revised.getResponse().getContentAsString()).isEqualTo(200);
         JsonNode r = p.data(revised);
-        assertThat(r.path("amountTotal").decimalValue()).isEqualByComparingTo("530000");
-        assertThat(r.path("interestPortion").decimalValue()).isEqualByComparingTo("50000");
-        assertThat(r.path("principalPortion").decimalValue()).isEqualByComparingTo("480000");
+        assertThat(r.path("amountTotal").decimalValue()).isEqualByComparingTo("510000");
+        assertThat(r.path("interestPortion").decimalValue()).isEqualByComparingTo("10000");
+        assertThat(r.path("principalPortion").decimalValue()).isEqualByComparingTo("500000");
+        assertThat(r.path("interestWaived").decimalValue()).isEqualByComparingTo("40000");
         assertThat(r.path("revisionOfId").asText()).isEqualTo(wrong.toString());
-        assertThat(r.path("revisionReason").asText()).isEqualTo("Typed 53,000 instead of 530,000");
+        assertThat(r.path("revisionReason").asText()).isEqualTo("Typed 53,000 instead of 510,000");
         assertThat(r.path("paymentReference").asText()).isEqualTo("Proof on WhatsApp");
 
         Loan after = p.reload(loan);
-        assertThat(after.getOutstandingPrincipal()).isEqualByComparingTo("20000");
+        assertThat(after.getOutstandingPrincipal()).isEqualByComparingTo("0");
         assertThat(after.getOutstandingInterest()).isEqualByComparingTo("0");
+        assertThat(after.getStatus()).isEqualTo(rw.terimbere.csams.modules.loan.entity.LoanStatus.CLOSED);
 
         JsonNode list = p.data(mockMvc.perform(get(base).header("Authorization", bearer(p.reviewer))).andReturn());
         assertThat(list.size()).isEqualTo(2);
@@ -81,7 +84,7 @@ class LoanRepaymentRevisionIntegrationTest {
         // the ledger keeps the wrong credits with their reversals, and credits the corrected repayment
         java.math.BigDecimal corrected = jdbc.queryForObject("select coalesce(sum(credit_amount),0) from financial_ledger"
                 + " where source_entity_id = ?", java.math.BigDecimal.class, UUID.fromString(r.path("id").asText()));
-        assertThat(corrected).isEqualByComparingTo("530000");
+        assertThat(corrected).isEqualByComparingTo("510000");
         assertThat(p.count("select count(*) from financial_ledger where cooperative_id = ? and transaction_type = 'REVERSAL'", p.id()))
                 .isEqualTo(2);
     }

@@ -30,6 +30,20 @@ public final class LoanScheduleAllocator {
             BigDecimal amount,
             List<LoanRepaymentComponent> order,
             LocalDate asOfDate) {
+        return allocatePayment(installments, amount, order, asOfDate, null);
+    }
+
+    /**
+     * As above, taking at most {@code interestCap} as interest (the interest earned so far when a loan is repaid
+     * early); the rest goes to the other components. {@code null} means no cap.
+     */
+    public static PaymentSplit allocatePayment(
+            List<LoanInstallment> installments,
+            BigDecimal amount,
+            List<LoanRepaymentComponent> order,
+            LocalDate asOfDate,
+            BigDecimal interestCap) {
+        BigDecimal interestRoom = interestCap == null ? null : MoneyUtils.scale(interestCap);
         BigDecimal remaining = MoneyUtils.scale(amount == null ? BigDecimal.ZERO : amount);
         BigDecimal totalPrincipal = zero();
         BigDecimal totalInterest = zero();
@@ -50,7 +64,10 @@ public final class LoanScheduleAllocator {
                         break;
                     }
                     BigDecimal available = remainingOf(installment, component);
-                    if (MoneyUtils.isZero(available)) {
+                    if (component == LoanRepaymentComponent.INTEREST && interestRoom != null) {
+                        available = available.min(interestRoom);
+                    }
+                    if (MoneyUtils.isZero(available) || available.signum() <= 0) {
                         continue;
                     }
                     BigDecimal taken = remaining.min(available);
@@ -62,6 +79,9 @@ public final class LoanScheduleAllocator {
                         totalPrincipal = MoneyUtils.add(totalPrincipal, taken);
                     } else if (component == LoanRepaymentComponent.INTEREST) {
                         totalInterest = MoneyUtils.add(totalInterest, taken);
+                        if (interestRoom != null) {
+                            interestRoom = MoneyUtils.scale(interestRoom.subtract(taken));
+                        }
                     } else {
                         totalPenalty = MoneyUtils.add(totalPenalty, taken);
                     }

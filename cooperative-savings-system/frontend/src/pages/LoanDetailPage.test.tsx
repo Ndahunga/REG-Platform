@@ -28,6 +28,8 @@ vi.mock('@/shared/api/loans', () => ({
   disburseLoan: vi.fn(),
   writeOffLoan: vi.fn(),
   createLoanRepayment: vi.fn(),
+  fetchLoanSettlement: vi.fn(),
+  reviseLoanRepayment: vi.fn(),
 }))
 
 vi.mock('@/shared/api/subscription', () => ({

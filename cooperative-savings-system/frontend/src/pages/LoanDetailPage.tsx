@@ -16,7 +16,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSnackbar } from 'notistack'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link as RouterLink, useParams } from 'react-router-dom'
@@ -64,6 +64,7 @@ import {
   fetchLoan,
   fetchLoanRepayments,
   reviseLoanRepayment,
+  fetchLoanSettlement,
   fetchLoanScheduleWhatsAppStatus,
   rejectLoan,
   shareLoanScheduleViaWhatsApp,
@@ -240,6 +241,10 @@ export function LoanDetailPage() {
   })
 
   const [reviseFor, setReviseFor] = useState<LoanRepayment | null>(null)
+  const settlementFor = useCallback(
+    (date: string) => fetchLoanSettlement(cooperativeId!, loanId, date),
+    [cooperativeId, loanId],
+  )
   const reviseMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: LoanRepaymentReviseRequest }) =>
       reviseLoanRepayment(cooperativeId!, loanId, id, payload),
@@ -282,6 +287,11 @@ export function LoanDetailPage() {
                   sx={{ mt: 0.5 }}
                   label={row.revisedById ? t('loans.repayment.revisedChip') : t('loans.repayment.reversedChip')}
                 />
+              ) : null}
+              {Number(row.interestWaived ?? 0) > 0 ? (
+                <Typography variant="caption" component="div" color="success.main">
+                  {t('loans.repayment.interestWaived', { amount: formatOptionalMoney(row.interestWaived) })}
+                </Typography>
               ) : null}
               {row.revisionOfId ? (
                 <Box sx={{ mt: 0.5 }}>
@@ -953,6 +963,7 @@ export function LoanDetailPage() {
         })}
         onClose={() => setRepayOpen(false)}
         onSubmit={(payload) => repayMutation.mutate(payload)}
+        settlementFor={settlementFor}
       />
 
       <WhatsAppShareDialog

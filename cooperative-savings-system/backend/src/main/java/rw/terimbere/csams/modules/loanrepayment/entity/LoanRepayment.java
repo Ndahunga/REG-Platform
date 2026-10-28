@@ -90,6 +90,11 @@ public class LoanRepayment {
     @Column(name = "revision_of_id", updatable = false)
     private UUID revisionOfId;
 
+    /** Interest of the months not used, waived because the loan was repaid early. */
+    @Builder.Default
+    @Column(name = "interest_waived", nullable = false, precision = 19, scale = 4, updatable = false)
+    private BigDecimal interestWaived = BigDecimal.ZERO;
+
     /** Why the earlier repayment was revised. */
     @Column(name = "revision_reason", length = 500, updatable = false)
     private String revisionReason;

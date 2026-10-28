@@ -327,6 +327,21 @@ export interface LoanRepayment {
   /** On a replaced repayment: the corrected one. */
   revisedById?: string | null
   revisable?: boolean
+  /** Interest of unused months not charged because the loan was repaid early. */
+  interestWaived?: string | number | null
+}
+
+/** What repaying a loan in full on a date takes: interest only for the months used. */
+export interface LoanSettlement {
+  asOf: string
+  monthsCharged: number
+  interestEarned: string | number
+  interestPaid: string | number
+  interestToPay: string | number
+  principal: string | number
+  penalty: string | number
+  total: string | number
+  interestWaived: string | number
 }
 
 export interface LoanRepaymentReviseRequest {
