@@ -232,7 +232,7 @@ describe('rotation entitlements', { timeout: 30_000 }, () => {
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: 'Request payout' }))
     const dialog = await screen.findByRole('dialog', { name: 'Request a payout' })
-    await user.type(within(dialog).getByRole('textbox', { name: /Amount/ }), 'abc')
+    await user.type(within(dialog).getByRole('textbox', { name: /Amount/ }), '0')
     await user.click(within(dialog).getByRole('button', { name: 'Request payout' }))
     expect(await within(dialog).findByText(/Enter a positive amount/)).toBeInTheDocument()
     expect(requestMock).not.toHaveBeenCalled()

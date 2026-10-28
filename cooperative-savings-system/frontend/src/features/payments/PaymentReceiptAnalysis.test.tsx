@@ -131,7 +131,7 @@ describe('member receipt analysis before submission', { timeout: 30_000 }, () =>
     await uploadReceipt(user)
     expect(await screen.findByTestId('receipt-analysis-review')).toHaveTextContent(/does not clearly say the payment was successful/)
     await fillContribution(user)
-    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1500') // filled from the receipt
+    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1,500') // filled from the receipt
     await user.type(screen.getByRole('textbox', { name: /Transaction reference/ }), 'TX9988776655')
     expect(submitButton()).toBeDisabled()
 
@@ -151,7 +151,7 @@ describe('member receipt analysis before submission', { timeout: 30_000 }, () =>
     expect(await screen.findByTestId('receipt-analysis-success')).toHaveTextContent(/An officer still has to verify the payment/)
     expect(screen.getByTestId('receipt-analysis-details')).toHaveTextContent('Reference on the receipt: TX9988776655')
     expect(screen.getByTestId('receipt-analysis-details')).toHaveTextContent('Date on the receipt: 2026-09-12')
-    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1500')
+    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1,500')
     expect(screen.queryByRole('checkbox', { name: 'Submit this payment for manual review' })).not.toBeInTheDocument()
 
     await fillContribution(user)
@@ -183,7 +183,7 @@ describe('member receipt analysis before submission', { timeout: 30_000 }, () =>
     expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('')
     expect(candidates).toHaveTextContent(/more than one possible amount/)
     await user.click(screen.getByText(/80,000/))
-    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('80000')
+    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('80,000')
   })
 
   it('warns about a different recipient account and a reference already used', async () => {

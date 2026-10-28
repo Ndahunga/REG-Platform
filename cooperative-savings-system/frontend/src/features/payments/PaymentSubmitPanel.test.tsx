@@ -290,7 +290,7 @@ describe('PaymentSubmitPanel', { timeout: 30_000 }, () => {
     await user.click(screen.getByRole('button', { name: 'Submit payment for verification' }))
     expect(await screen.findByTestId('payment-error')).toHaveTextContent(/already used by a payment in this Saving Scheme/)
     expect(screen.getAllByTestId('payment-allocation-draft')).toHaveLength(1)
-    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1500')
+    expect(screen.getByRole('textbox', { name: /Total amount paid/ })).toHaveValue('1,500')
   })
 
   it('replays the same idempotency key when the same payment is resubmitted after a lost connection', async () => {
