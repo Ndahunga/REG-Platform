@@ -30,4 +30,12 @@ public class LoanRepaymentResponse {
     private Instant createdAt;
     /** True when a payment reversal gave this repayment back to the loan. */
     private boolean reversed;
+    private Instant reversedAt;
+    /** On a corrected repayment: the repayment it replaced. */
+    private UUID revisionOfId;
+    private String revisionReason;
+    /** On a replaced repayment: the corrected repayment recorded in its place. */
+    private UUID revisedById;
+    /** The repayment can be revised here (in force, not posted from a member payment or credit). */
+    private boolean revisable;
 }

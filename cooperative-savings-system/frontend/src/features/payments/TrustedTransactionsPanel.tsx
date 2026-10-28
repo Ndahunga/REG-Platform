@@ -21,6 +21,7 @@ import { VerificationCapabilitiesNotice } from './VerificationCapabilitiesNotice
 import { ErrorNotice, PaymentStatusChip } from './PaymentParts'
 import { isPositiveAmount } from './paymentHelpers'
 import { outcomeColor } from './VerificationOutcomeSection'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface TrustedTransactionsPanelProps {
   cooperativeId: string
@@ -211,7 +212,7 @@ export function TrustedTransactionsPanel({ cooperativeId }: TrustedTransactionsP
               error={attempted && referenceMissing}
               helperText={attempted && referenceMissing ? t('payments.reconcile.referenceRequired') : undefined}
             />
-            <TextField
+            <MoneyField
               fullWidth
               size="small"
               label={t('payments.columns.amount')}

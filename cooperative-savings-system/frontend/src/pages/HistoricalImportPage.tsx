@@ -54,6 +54,7 @@ import {
 } from '@/shared/types/historicalImport'
 import { formatMoney } from '@/shared/utils/formatMoney'
 import { todayInKigaliIso } from '@/shared/utils/rwandaCooperative'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 function OpeningBalanceImport() {
   const { t } = useTranslation()
@@ -314,7 +315,7 @@ function OpeningBalanceImport() {
                   sx={{ width: { xs: '100%', sm: 230 } }}
                 />
                 {loansMode ? null : (
-                <TextField
+                <MoneyField
                   required
                   size="small"
                   label={t('historicalImport.openingFunds')}

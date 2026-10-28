@@ -27,6 +27,7 @@ import { fetchMembers } from '@/shared/api/members'
 import type { RotationImportRequest, RotationTurnMode, ShareCycleCreateRequest } from '@/shared/types/rotation'
 import { firstSelectableMonth, memberLabel, newIdempotencyKey, parseMonthInput } from './rotationHelpers'
 import { autoArrange, checkTurns, draftKey, money, monthOf, type DraftTurn, type ShareHolder } from './shareCycle'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 const TURN_MODES: RotationTurnMode[] = ['ONE_SHARE_PER_TURN', 'ALL_SHARES_TOGETHER', 'GROUPED_BY_MONTH']
 
@@ -221,7 +222,7 @@ export function ShareCycleDialog({ open, cooperativeId, mode, model, loading, on
                 fullWidth
               />
             ) : null}
-            <TextField
+            <MoneyField
               label={t('rotation.share.payoutPerShare')}
               value={perShare}
               onChange={(e) => setPerShare(e.target.value)}
@@ -314,7 +315,7 @@ export function ShareCycleDialog({ open, cooperativeId, mode, model, loading, on
                         <TableCell align="right">{money(payout * turn.shares)}</TableCell>
                         {importing ? (
                           <TableCell sx={{ width: 140 }}>
-                            <TextField
+                            <MoneyField
                               size="small"
                               value={turn.openingReceivedAmount ?? ''}
                               onChange={(e) =>
@@ -390,7 +391,7 @@ export function ShareCycleDialog({ open, cooperativeId, mode, model, loading, on
                     <Typography sx={{ flex: 1 }}>
                       {h.label} ({h.shares})
                     </Typography>
-                    <TextField
+                    <MoneyField
                       size="small"
                       label={t('rotation.share.paidIn')}
                       value={paidIn[h.userId] ?? ''}
@@ -400,7 +401,7 @@ export function ShareCycleDialog({ open, cooperativeId, mode, model, loading, on
                   </Stack>
                 ))}
               </Stack>
-              <TextField
+              <MoneyField
                 sx={{ mt: 2 }}
                 label={t('rotation.share.cashAtCutover')}
                 helperText={t('rotation.share.cashAtCutoverHint')}

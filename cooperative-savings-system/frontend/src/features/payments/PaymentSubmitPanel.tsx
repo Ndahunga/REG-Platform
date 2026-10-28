@@ -52,6 +52,7 @@ import {
   type AllocationDraft,
   type SubmissionProblem,
 } from './paymentHelpers'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface PaymentSubmitPanelProps {
   cooperativeId: string
@@ -386,7 +387,7 @@ export function PaymentSubmitPanel({ cooperativeId, onViewPayments }: PaymentSub
       <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, border: '1px solid', borderColor: 'divider' }}>
         <Stack spacing={2}>
           <Typography variant="h6">{t('payments.submit.detailsTitle')}</Typography>
-          <TextField
+          <MoneyField
             label={t('payments.fields.amount')}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
@@ -652,7 +653,7 @@ export function PaymentSubmitPanel({ cooperativeId, onViewPayments }: PaymentSub
                     </Typography>
                   ) : null}
 
-                  <TextField
+                  <MoneyField
                     size="small"
                     label={t('payments.allocation.amount')}
                     value={draft.amount}

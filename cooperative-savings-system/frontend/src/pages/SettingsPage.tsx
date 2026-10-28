@@ -38,6 +38,7 @@ import {
   COMMON_TIMEZONES,
   SUPPORTED_LOCALES,
 } from '@/shared/types/cooperativeSettings'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 export function SettingsPage() {
   const { t } = useTranslation()
@@ -163,14 +164,12 @@ export function SettingsPage() {
               ))}
             </TextField>
 
-            <TextField
+            <MoneyField
               label={t('settings.fields.baseSharePrice')}
               helperText={
                 errors.baseSharePrice?.message || t('settings.fields.baseSharePriceHint')
               }
-              type="number"
               error={Boolean(errors.baseSharePrice)}
-              slotProps={{ htmlInput: { min: 0, step: 'any' } }}
               {...register('baseSharePrice', { validate: validateBaseSharePrice })}
               fullWidth
             />

@@ -1755,7 +1755,19 @@
       "emptyTitle": "Nta kwishyura",
       "emptyDescription": "Andika kwishyura iyo inguzanyo ikora.",
       "success": "Kwishyura byanditswe",
-      "maxHint": "Amafaranga asigaye: {{amount}}"
+      "maxHint": "Amafaranga asigaye: {{amount}}",
+      "revise": "Kosora",
+      "reviseTitle": "Kosora ubwishyu",
+      "reviseHelp": "Ubwishyu bwa {{amount}} bwo ku wa {{date}} buzasubizwa ku nguzanyo kandi bugumane mu mateka nk'ubwakosowe. Andika ayishyuwe koko.",
+      "correctAmount": "Amafaranga nyayo",
+      "reviseReason": "Impamvu yo gukosora",
+      "reviseReasonHelp": "Ku bw'igenzura, urugero: handitswe 53,000 aho kuba 530,000.",
+      "reviseSubmit": "Bika ikosora",
+      "revised": "Ubwishyu bwakosowe",
+      "revisedChip": "Bwakosowe",
+      "reversedChip": "Bwasubijwe",
+      "correctionChip": "Ikosora",
+      "correctionOf": "Isimbura {{amount}}: {{reason}}"
     },
     "schedule": {
       "title": "Gahunda yo kwishyura",

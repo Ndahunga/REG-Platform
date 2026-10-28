@@ -19,6 +19,7 @@ import {
   toRepaymentPayload,
   type RepaymentFormValues,
 } from './loanFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface RepaymentDialogProps {
   open: boolean
@@ -66,7 +67,7 @@ export function RepaymentDialog({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField
+            <MoneyField
               label={t('loans.repayment.amount')}
               error={Boolean(errors.amount)}
               helperText={errors.amount?.message || maxHint}

@@ -1,4 +1,4 @@
-import { Box, Button, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material'
+import { Box, Button, FormControlLabel, Stack, Switch, Typography } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSnackbar } from 'notistack'
 import { useEffect, useState } from 'react'
@@ -8,6 +8,7 @@ import { useAppSelector } from '@/app/store/hooks'
 import { getErrorMessage } from '@/shared/api/client'
 import { fetchLoanSettings, updateLoanSettings } from '@/shared/api/loanSettings'
 import type { LoanRepaymentComponent, LoanSettingsUpdateRequest } from '@/shared/types/loan'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 /** Loans granted by shares: a limit per share held, and whether an overdue contribution blocks a new loan. */
 export function LoanSharePolicyCard({ cooperativeId }: { cooperativeId: string }) {
@@ -66,7 +67,7 @@ export function LoanSharePolicyCard({ cooperativeId }: { cooperativeId: string }
         {t('loans.sharePolicy.description')}
       </Typography>
       <Stack spacing={2}>
-        <TextField
+        <MoneyField
           label={t('loans.sharePolicy.perShare')}
           value={perShare}
           onChange={(e) => setPerShare(e.target.value)}

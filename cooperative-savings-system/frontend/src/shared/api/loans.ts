@@ -18,6 +18,7 @@ import type {
   LoanRejectRequest,
   LoanRepayment,
   LoanRepaymentCreateRequest,
+  LoanRepaymentReviseRequest,
   LoanRepaymentPreviewRequest,
   LoanSchedulePreview,
 } from '@/shared/types/loan'
@@ -199,6 +200,19 @@ export async function fetchLoanRepayments(
   const data = unwrapApiData(response.data)
   const list = Array.isArray(data) ? data : (data.content ?? [])
   return list.map(mapLoanRepayment)
+}
+
+export async function reviseLoanRepayment(
+  cooperativeId: string,
+  loanId: string,
+  repaymentId: string,
+  payload: LoanRepaymentReviseRequest,
+): Promise<LoanRepayment> {
+  const response = await apiClient.post<ApiResponse<LoanRepayment>>(
+    `/cooperatives/${cooperativeId}/loans/${loanId}/repayments/${repaymentId}/revise`,
+    payload,
+  )
+  return mapLoanRepayment(unwrapApiData(response.data))
 }
 
 export async function createLoanRepayment(

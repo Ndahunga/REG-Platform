@@ -43,6 +43,7 @@ import { AUTH_ACTION_BUTTON_SX } from '@/layouts/authFormStyles'
 import { plainLinkSx } from '@/shared/styles/plainLink'
 import { ROUTES } from '@/shared/constants/routes'
 import { formatMoney } from '@/shared/utils/formatMoney'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 const DUE_DAYS = Array.from(
@@ -231,7 +232,7 @@ export function SignupPage() {
                 />
               </Stack>
               <Stack direction="column" spacing={2}>
-                <TextField
+                <MoneyField
                   label={t('cooperatives.fields.monthlyContributionAmount')}
                   required
                   fullWidth

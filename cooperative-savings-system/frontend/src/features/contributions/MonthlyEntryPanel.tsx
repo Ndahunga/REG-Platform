@@ -49,6 +49,7 @@ import {
   type ContributionLineInput,
   type ContributionLineErrors,
 } from './contributionHelpers'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface EditableLine extends ContributionPeriodLine {
   paidAmountInput: string
@@ -297,7 +298,7 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
         <ObligationDetails fields={line} />
         {canWrite && !isLocked(line) ? (
           <>
-            <TextField
+            <MoneyField
               size="small"
               label={t('contributions.fields.paid')}
               value={line.paidAmountInput}
@@ -489,7 +490,7 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
                     <TableCell>{formatMoney(line.expectedAmount)}</TableCell>
                     <TableCell sx={{ minWidth: 110 }}>
                       {canWrite && !isLocked(line) ? (
-                        <TextField
+                        <MoneyField
                           size="small"
                           value={line.paidAmountInput}
                           onChange={(e) =>

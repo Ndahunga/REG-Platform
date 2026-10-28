@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,6 +30,7 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import { ResponsiveTable, type TableColumn } from '@/shared/components/ResponsiveTable'
 import type { PeriodEntitlement, PeriodPayoutEligibility } from '@/shared/types/rotationPayout'
 import { formatMoney } from '@/shared/utils/formatMoney'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface RotationEntitlementsPanelProps {
   cooperativeId: string
@@ -206,7 +206,7 @@ function RequestPayoutDialog({
               outstanding: formatMoney(maxRequestable),
             })}
           </Typography>
-          <TextField
+          <MoneyField
             label={t('rotation.payouts.amountOptional')}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

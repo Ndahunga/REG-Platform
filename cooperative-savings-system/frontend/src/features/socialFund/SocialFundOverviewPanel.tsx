@@ -9,7 +9,6 @@ import {
   Grid,
   Stack,
   Switch,
-  TextField,
   Typography,
   Button,
 } from '@mui/material'
@@ -36,6 +35,7 @@ import {
   toSocialFundSettingsPayload,
   type SocialFundSettingsFormValues,
 } from './socialFundFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface SocialFundOverviewPanelProps {
   cooperativeId: string
@@ -207,7 +207,7 @@ export function SocialFundOverviewPanel({
           ) : null}
 
           <Stack spacing={2}>
-            <TextField
+            <MoneyField
               label={t('socialFund.settings.suggestedAmount')}
               error={Boolean(errors.suggestedContributionAmount)}
               helperText={errors.suggestedContributionAmount?.message}

@@ -12,6 +12,7 @@ import type { RotationConfiguration } from '@/shared/types/rotation'
 import { LoadingState } from '@/shared/components/LoadingState'
 import type { SchemeOperatingModel } from '@/shared/types/cooperative'
 import { bpsToPercent, firstSelectableMonth, monthKey, parseMonthInput } from './rotationHelpers'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 type SplitProblem = 'required' | 'range'
 
@@ -125,7 +126,7 @@ export function RotationConfigPanel({ cooperativeId, model, canManage }: Rotatio
               <Typography variant="body2">{t('rotation.config.rotatingFixed')}</Typography>
             ) : (
               <>
-                <TextField
+                <MoneyField
                   label={t('rotation.config.rotatingAmount')}
                   required
                   value={rotatingAmount}

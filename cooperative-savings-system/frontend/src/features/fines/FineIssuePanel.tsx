@@ -28,6 +28,7 @@ import {
   toFineCreatePayload,
   type FineIssueFormValues,
 } from './fineFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface FineIssuePanelProps {
   cooperativeId: string
@@ -137,7 +138,7 @@ export function FineIssuePanel({ cooperativeId }: FineIssuePanelProps) {
           ))}
         </TextField>
         {calculationMode === 'FIXED' ? (
-          <TextField
+          <MoneyField
             label={t('fines.fields.amount')}
             error={Boolean(errors.amount)}
             helperText={errors.amount?.message}
@@ -146,14 +147,14 @@ export function FineIssuePanel({ cooperativeId }: FineIssuePanelProps) {
           />
         ) : (
           <>
-            <TextField
+            <MoneyField
               label={t('fines.fields.baseAmount')}
               error={Boolean(errors.baseAmount)}
               helperText={errors.baseAmount?.message}
               {...register('baseAmount')}
               fullWidth
             />
-            <TextField
+            <MoneyField
               label={t('fines.fields.dailyIncrement')}
               error={Boolean(errors.dailyIncrement)}
               helperText={errors.dailyIncrement?.message}

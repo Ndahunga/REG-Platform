@@ -17,6 +17,7 @@ import {
   type CampaignFormValues,
 } from './contributionFormSchemas'
 import type { SpecialCampaignCreateRequest } from '@/shared/types/specialContribution'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface CampaignFormDialogProps {
   open: boolean
@@ -77,14 +78,14 @@ export function CampaignFormDialog({
               minRows={2}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
+              <MoneyField
                 label={t('contributions.campaigns.fields.suggestedAmount')}
                 error={Boolean(errors.suggestedAmount)}
                 helperText={errors.suggestedAmount?.message}
                 {...register('suggestedAmount')}
                 fullWidth
               />
-              <TextField
+              <MoneyField
                 label={t('contributions.campaigns.fields.targetAmount')}
                 error={Boolean(errors.targetAmount)}
                 helperText={errors.targetAmount?.message}

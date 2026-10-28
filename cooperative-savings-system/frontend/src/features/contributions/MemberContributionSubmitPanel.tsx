@@ -24,6 +24,7 @@ import { ObligationDetails } from './ObligationDetails'
 import { formatMoney } from '@/shared/utils/formatMoney'
 import { checkMoney, isFutureIsoDate, isValidIsoDate } from '@/shared/utils/formValidation'
 import { todayInKigaliIso } from '@/shared/utils/rwandaCooperative'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface FormValues {
   year: string
@@ -277,7 +278,7 @@ export function MemberContributionSubmitPanel({
             </Stack>
           </Alert>
         ) : null}
-        <TextField
+        <MoneyField
           label={t('contributions.submit.amountPaidNow')}
           error={Boolean(errors.amount)}
           helperText={errors.amount?.message}

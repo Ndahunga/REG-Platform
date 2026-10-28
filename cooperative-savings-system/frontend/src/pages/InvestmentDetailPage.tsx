@@ -62,6 +62,7 @@ import { ResponsiveTable, type TableColumn } from '@/shared/components/Responsiv
 import { ROUTES } from '@/shared/constants/routes'
 import type { InvestmentReturn } from '@/shared/types/investment'
 import { formatMoney } from '@/shared/utils/formatMoney'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -446,7 +447,7 @@ export function InvestmentDetailPage() {
               helperText={returnForm.formState.errors.returnDate?.message}
               fullWidth
             />
-            <TextField
+            <MoneyField
               label={t('investments.fields.capitalPortion')}
               {...returnForm.register('capitalPortion')}
               error={Boolean(returnForm.formState.errors.capitalPortion)}
@@ -458,7 +459,7 @@ export function InvestmentDetailPage() {
               }
               fullWidth
             />
-            <TextField
+            <MoneyField
               label={t('investments.fields.profitPortion')}
               {...returnForm.register('profitPortion')}
               error={Boolean(returnForm.formState.errors.profitPortion)}

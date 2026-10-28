@@ -30,6 +30,7 @@ import {
   toFinePaymentPayload,
   type FinePaymentFormValues,
 } from './fineFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface FinePaymentDialogProps {
   open: boolean
@@ -109,7 +110,7 @@ export function FinePaymentDialog({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField
+            <MoneyField
               label={t('fines.payment.amount')}
               error={Boolean(errors.amount)}
               helperText={errors.amount?.message || maxHint}

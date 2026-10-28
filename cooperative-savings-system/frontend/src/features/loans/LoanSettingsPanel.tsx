@@ -42,6 +42,7 @@ import {
   toLoanSettingsPayload,
   type LoanSettingsFormValues,
 } from './loanFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface LoanSettingsPanelProps {
   cooperativeId: string
@@ -185,7 +186,7 @@ export function LoanSettingsPanel({ cooperativeId }: LoanSettingsPanelProps) {
             </MenuItem>
           ))}
         </TextField>
-        <TextField
+        <MoneyField
           label={t('loans.settings.maxLoanAmount')}
           error={Boolean(errors.maxLoanAmount)}
           helperText={errors.maxLoanAmount?.message}
@@ -392,7 +393,7 @@ export function LoanSettingsPanel({ cooperativeId }: LoanSettingsPanelProps) {
                   fullWidth
                   disabled={!canManageShareTiers}
                 />
-                <TextField
+                <MoneyField
                   label={t('loans.settings.tierMaxLoanAmount')}
                   error={Boolean(errors.shareTiers?.[index]?.maxLoanAmount)}
                   helperText={errors.shareTiers?.[index]?.maxLoanAmount?.message}

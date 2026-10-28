@@ -18,6 +18,7 @@ import {
   toSpecialSubmitPayload,
   type SpecialSubmitFormValues,
 } from './contributionFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface SubmitSpecialDialogProps {
   open: boolean
@@ -67,7 +68,7 @@ export function SubmitSpecialDialog({
       >
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField
+            <MoneyField
               label={t('contributions.fields.paid')}
               error={Boolean(errors.amount)}
               helperText={errors.amount?.message}

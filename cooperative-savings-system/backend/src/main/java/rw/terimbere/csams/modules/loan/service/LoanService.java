@@ -46,6 +46,7 @@ import rw.terimbere.csams.modules.loan.dto.LoanRejectRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentCreateRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentPreviewRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentResponse;
+import rw.terimbere.csams.modules.loan.dto.LoanRepaymentReviseRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRequestCreateRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanResponse;
 import rw.terimbere.csams.modules.loan.dto.LoanScheduleResponse;
@@ -675,6 +676,20 @@ public class LoanService {
             String notes,
             Boolean allocateInterestFirst,
             UUID actorId) {
+        return applyRepayment(cooperative, loan, amount, paymentDate, reference, notes, allocateInterestFirst, actorId, null, null);
+    }
+
+    private LoanRepayment applyRepayment(
+            Cooperative cooperative,
+            Loan loan,
+            BigDecimal amount,
+            java.time.LocalDate paymentDate,
+            String reference,
+            String notes,
+            Boolean allocateInterestFirst,
+            UUID actorId,
+            UUID revisionOfId,
+            String revisionReason) {
         if (loan.getStatus() != LoanStatus.ACTIVE && loan.getStatus() != LoanStatus.OVERDUE) {
             throw new BusinessException("Repayments are only allowed on ACTIVE or OVERDUE loans");
         }
@@ -750,6 +765,8 @@ public class LoanService {
                 .paymentReference(reference)
                 .notes(notes)
                 .recordedBy(actorId)
+                .revisionOfId(revisionOfId)
+                .revisionReason(revisionReason)
                 .build();
         repayment = loanRepaymentRepository.save(repayment);
         persistAllocations(repayment, split);
@@ -822,16 +839,101 @@ public class LoanService {
         return repayment;
     }
 
+    /**
+     * Corrects a repayment recorded with a mistake (wrong amount, date or reference). The wrong repayment is given back
+     * to the loan exactly as {@link #reverseRepayment} does (it stays on record, marked reversed) and the corrected one
+     * is recorded in its place, pointing to it with the reason. Repayments that came from a member payment or a member
+     * credit are corrected through those (reverse the payment), not here.
+     */
+    @Transactional
+    public LoanRepaymentResponse reviseRepayment(
+            UUID cooperativeId,
+            UUID loanId,
+            UUID repaymentId,
+            LoanRepaymentReviseRequest request,
+            HttpServletRequest httpRequest) {
+        Cooperative cooperative = requireCooperative(cooperativeId);
+        UserPrincipal principal = authorizationService.currentPrincipal();
+        authorizationService.requireMembership(cooperativeId);
+        String reason = trimToNull(request.getReason());
+        if (reason == null || reason.length() < 5) {
+            throw new BusinessException("REVISION_REASON_REQUIRED", "Say why the repayment is revised (at least 5 characters)");
+        }
+        schemeFundLockService.lockSchemeFund(cooperativeId);
+        Loan loan = loanRepository
+                .findByIdAndCooperativeIdForUpdate(loanId, cooperativeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan", loanId));
+        LoanRepayment original = loanRepaymentRepository
+                .findById(repaymentId)
+                .filter(r -> r.getCooperativeId().equals(cooperativeId) && r.getLoanId().equals(loanId))
+                .orElseThrow(() -> new ResourceNotFoundException("Loan repayment", repaymentId));
+        if (loanRepaymentRepository.countMemberPaymentPostings(repaymentId) > 0
+                || loanRepaymentRepository.countMemberCreditApplications(repaymentId) > 0) {
+            throw new BusinessException(
+                    "REPAYMENT_FROM_PAYMENT",
+                    "This repayment was posted from a member payment; correct it by reversing that payment");
+        }
+        BigDecimal amount = MoneyUtils.scaleForStorage(request.getAmount());
+        MoneyUtils.assertPositive(amount);
+        LoanRepaymentResponse before = toRepaymentResponse(original);
+
+        reverseRepayment(loan, original, principal.getId());
+        LoanRepayment revised = applyRepayment(
+                cooperative,
+                loan,
+                amount,
+                request.getPaymentDate() != null ? request.getPaymentDate() : original.getPaymentDate(),
+                request.getPaymentReference() != null ? trimToNull(request.getPaymentReference()) : original.getPaymentReference(),
+                request.getNotes() != null ? trimToNull(request.getNotes()) : original.getNotes(),
+                request.getAllocateInterestFirst(),
+                principal.getId(),
+                original.getId(),
+                reason);
+
+        auditService.record(
+                principal.getId(),
+                cooperativeId,
+                AuditableAction.LOAN_REPAYMENT_REVISION,
+                "LoanRepayment",
+                revised.getId(),
+                "{\"repaymentId\":\"" + original.getId() + "\",\"amount\":\"" + before.getAmountTotal()
+                        + "\",\"paymentDate\":\"" + before.getPaymentDate() + "\"}",
+                "{\"repaymentId\":\"" + revised.getId() + "\",\"amount\":\"" + revised.getAmountTotal()
+                        + "\",\"paymentDate\":\"" + revised.getPaymentDate() + "\",\"reason\":"
+                        + jsonString(reason) + "}",
+                clientIp(httpRequest),
+                userAgent(httpRequest));
+        return toRepaymentResponse(revised);
+    }
+
+    private static String jsonString(String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\"";
+    }
+
     @Transactional(readOnly = true)
     public List<LoanRepaymentResponse> listRepayments(UUID cooperativeId, UUID loanId) {
         requireCooperative(cooperativeId);
         authorizationService.requireMembership(cooperativeId);
         requireLoanReadAccess(requireLoan(cooperativeId, loanId));
-        return loanRepaymentRepository
+        List<LoanRepaymentResponse> rows = loanRepaymentRepository
                 .findByLoanIdAndCooperativeIdOrderByPaymentDateDescCreatedAtDesc(loanId, cooperativeId)
                 .stream()
                 .map(this::toRepaymentResponse)
+                .map(r -> {
+                    r.setRevisable(!r.isReversed()
+                            && loanRepaymentRepository.countMemberPaymentPostings(r.getId()) == 0
+                            && loanRepaymentRepository.countMemberCreditApplications(r.getId()) == 0);
+                    return r;
+                })
                 .toList();
+        java.util.Map<UUID, LoanRepaymentResponse> byId = new java.util.HashMap<>();
+        rows.forEach(r -> byId.put(r.getId(), r));
+        for (LoanRepaymentResponse r : rows) {
+            if (r.getRevisionOfId() != null && byId.containsKey(r.getRevisionOfId())) {
+                byId.get(r.getRevisionOfId()).setRevisedById(r.getId());
+            }
+        }
+        return rows;
     }
 
     /** What giving one repayment back to a loan restored, and where the loan stood before and after. */
@@ -1797,6 +1899,9 @@ public class LoanService {
                 .recordedBy(repayment.getRecordedBy())
                 .createdAt(repayment.getCreatedAt())
                 .reversed(repayment.isReversed())
+                .reversedAt(repayment.getReversedAt())
+                .revisionOfId(repayment.getRevisionOfId())
+                .revisionReason(repayment.getRevisionReason())
                 .build();
     }
 

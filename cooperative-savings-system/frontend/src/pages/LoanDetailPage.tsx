@@ -32,6 +32,7 @@ import {
   LoanApplicationFormView,
   LoanSchedulePreview,
   RepaymentDialog,
+  ReviseRepaymentDialog,
   canShowApprove,
   canShowDisburse,
   canShowReject,
@@ -62,6 +63,7 @@ import {
   exportLoanSchedule,
   fetchLoan,
   fetchLoanRepayments,
+  reviseLoanRepayment,
   fetchLoanScheduleWhatsAppStatus,
   rejectLoan,
   shareLoanScheduleViaWhatsApp,
@@ -77,9 +79,10 @@ import { PageHeader } from '@/shared/components/PageHeader'
 import { useCooperativeSubscription } from '@/features/subscription/useCooperativeSubscription'
 import { ResponsiveTable, type TableColumn } from '@/shared/components/ResponsiveTable'
 import { ROUTES } from '@/shared/constants/routes'
-import type { LoanRepayment, LoanRepaymentCreateRequest } from '@/shared/types/loan'
+import type { LoanRepayment, LoanRepaymentCreateRequest, LoanRepaymentReviseRequest } from '@/shared/types/loan'
 import { loanDisplayName } from '@/shared/types/loan'
 import { formatMoney, formatOptionalMoney } from '@/shared/utils/formatMoney'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -236,6 +239,21 @@ export function LoanDetailPage() {
     },
   })
 
+  const [reviseFor, setReviseFor] = useState<LoanRepayment | null>(null)
+  const reviseMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: LoanRepaymentReviseRequest }) =>
+      reviseLoanRepayment(cooperativeId!, loanId, id, payload),
+    onSuccess: () => {
+      enqueueSnackbar(t('loans.repayment.revised'), { variant: 'success' })
+      setReviseFor(null)
+      invalidate()
+      void repaymentsQuery.refetch()
+    },
+    onError: (error) => {
+      enqueueSnackbar(getErrorMessage(error, t('errors.generic')), { variant: 'error' })
+    },
+  })
+
   const repaymentColumns: TableColumn<LoanRepayment>[] = useMemo(
     () => [
       {
@@ -246,7 +264,39 @@ export function LoanDetailPage() {
       {
         id: 'total',
         label: t('loans.repayment.amount'),
-        render: (row) => formatOptionalMoney(row.amountTotal),
+        render: (row) => {
+          const replaced = (repaymentsQuery.data ?? []).find((r) => r.id === row.revisionOfId)
+          return (
+            <Box>
+              <Typography
+                variant="body2"
+                sx={row.reversed ? { textDecoration: 'line-through', color: 'text.disabled' } : undefined}
+              >
+                {formatOptionalMoney(row.amountTotal)}
+              </Typography>
+              {row.reversed ? (
+                <Chip
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  sx={{ mt: 0.5 }}
+                  label={row.revisedById ? t('loans.repayment.revisedChip') : t('loans.repayment.reversedChip')}
+                />
+              ) : null}
+              {row.revisionOfId ? (
+                <Box sx={{ mt: 0.5 }}>
+                  <Chip size="small" color="info" variant="outlined" label={t('loans.repayment.correctionChip')} />
+                  <Typography variant="caption" component="div" color="text.secondary">
+                    {t('loans.repayment.correctionOf', {
+                      amount: replaced ? formatOptionalMoney(replaced.amountTotal) : '—',
+                      reason: row.revisionReason ?? '',
+                    })}
+                  </Typography>
+                </Box>
+              ) : null}
+            </Box>
+          )
+        },
       },
       {
         id: 'principal',
@@ -272,8 +322,22 @@ export function LoanDetailPage() {
         render: (row) => row.paymentReference || '—',
         hideOnMobile: true,
       },
+      ...(canRecordLoans && !shareBlocked
+        ? [
+            {
+              id: 'revise',
+              label: '',
+              render: (row: LoanRepayment) =>
+                row.revisable ? (
+                  <Button size="small" onClick={() => setReviseFor(row)}>
+                    {t('loans.repayment.revise')}
+                  </Button>
+                ) : null,
+            },
+          ]
+        : []),
     ],
-    [t],
+    [t, canRecordLoans, shareBlocked, repaymentsQuery.data],
   )
 
   const downloadMutation = useMutation({
@@ -787,7 +851,7 @@ export function LoanDetailPage() {
         >
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
-              <TextField
+              <MoneyField
                 label={t('loans.fields.approvedAmount')}
                 error={Boolean(approveForm.formState.errors.approvedAmount)}
                 helperText={approveForm.formState.errors.approvedAmount?.message}
@@ -871,6 +935,15 @@ export function LoanDetailPage() {
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => writeOffMutation.mutate()}
       />
+
+      {reviseFor ? (
+        <ReviseRepaymentDialog
+          repayment={reviseFor}
+          loading={reviseMutation.isPending}
+          onClose={() => setReviseFor(null)}
+          onSubmit={(payload) => reviseMutation.mutate({ id: reviseFor.id, payload })}
+        />
+      ) : null}
 
       <RepaymentDialog
         open={repayOpen}

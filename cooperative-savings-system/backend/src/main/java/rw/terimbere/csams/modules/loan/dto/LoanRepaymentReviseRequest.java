@@ -1,0 +1,39 @@
+package rw.terimbere.csams.modules.loan.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/** The corrected repayment. Date, reference and notes left empty keep those of the repayment being revised. */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LoanRepaymentReviseRequest {
+
+    @NotNull
+    @DecimalMin(value = "0.01", inclusive = true)
+    private BigDecimal amount;
+
+    @PastOrPresent(message = "Payment date cannot be in the future")
+    private LocalDate paymentDate;
+
+    private String paymentReference;
+
+    private String notes;
+
+    @NotBlank
+    @Size(min = 5, max = 500)
+    private String reason;
+
+    @Builder.Default
+    private Boolean allocateInterestFirst = true;
+}

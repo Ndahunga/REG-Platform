@@ -39,6 +39,7 @@ import {
   toLoanCreatePayload,
   type LoanRequestFormValues,
 } from './loanFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface LoanRequestPanelProps {
   cooperativeId: string
@@ -266,7 +267,7 @@ export function LoanRequestPanel({ cooperativeId, isAdmin }: LoanRequestPanelPro
             ))}
           </TextField>
         ) : null}
-        <TextField
+        <MoneyField
           label={t('loans.fields.amount')}
           error={Boolean(errors.amount)}
           helperText={errors.amount?.message}
@@ -347,7 +348,7 @@ export function LoanRequestPanel({ cooperativeId, isAdmin }: LoanRequestPanelPro
               </MenuItem>
             ))}
         </TextField>
-        <TextField
+        <MoneyField
           label={t('loans.guarantor.guaranteedAmount')}
           error={Boolean(errors.guaranteedAmount)}
           helperText={errors.guaranteedAmount?.message}

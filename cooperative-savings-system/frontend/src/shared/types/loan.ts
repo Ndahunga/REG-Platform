@@ -318,6 +318,23 @@ export interface LoanRepayment {
   notes?: string | null
   recordedBy?: string | null
   createdAt?: string
+  /** Given back to the loan (by a revision or a payment reversal); kept on record. */
+  reversed?: boolean
+  reversedAt?: string | null
+  /** On a corrected repayment: the repayment it replaced, and why. */
+  revisionOfId?: string | null
+  revisionReason?: string | null
+  /** On a replaced repayment: the corrected one. */
+  revisedById?: string | null
+  revisable?: boolean
+}
+
+export interface LoanRepaymentReviseRequest {
+  amount: string
+  paymentDate?: string
+  paymentReference?: string
+  notes?: string
+  reason: string
 }
 
 export interface LoanRepaymentCreateRequest {

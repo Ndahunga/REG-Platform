@@ -17,6 +17,7 @@ import {
   toInvestmentCreatePayload,
   type InvestmentCreateFormValues,
 } from './investmentFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface InvestmentCreatePanelProps {
   cooperativeId: string
@@ -101,14 +102,14 @@ export function InvestmentCreatePanel({ cooperativeId }: InvestmentCreatePanelPr
           helperText={errors.name?.message}
           fullWidth
         />
-        <TextField
+        <MoneyField
           label={t('investments.fields.amount')}
           {...register('amount')}
           error={Boolean(errors.amount)}
           helperText={errors.amount?.message}
           fullWidth
         />
-        <TextField
+        <MoneyField
           label={t('investments.fields.expectedReturnAmount')}
           {...register('expectedReturnAmount')}
           error={Boolean(errors.expectedReturnAmount)}

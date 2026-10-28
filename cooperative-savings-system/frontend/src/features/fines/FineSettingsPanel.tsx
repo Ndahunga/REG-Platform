@@ -31,6 +31,7 @@ import {
   toFineSettingsPayload,
   type FineSettingsFormValues,
 } from './fineFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface FineSettingsPanelProps {
   cooperativeId: string
@@ -177,14 +178,14 @@ export function FineSettingsPanel({ cooperativeId }: FineSettingsPanelProps) {
             </MenuItem>
           ))}
         </TextField>
-        <TextField
+        <MoneyField
           label={t('fines.settings.baseFineAmount')}
           error={Boolean(errors.baseFineAmount)}
           helperText={errors.baseFineAmount?.message}
           {...register('baseFineAmount')}
           fullWidth
         />
-        <TextField
+        <MoneyField
           label={t('fines.settings.dailyIncrement')}
           error={Boolean(errors.dailyIncrement)}
           helperText={errors.dailyIncrement?.message}

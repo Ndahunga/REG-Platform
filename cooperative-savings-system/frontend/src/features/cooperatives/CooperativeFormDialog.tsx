@@ -37,6 +37,7 @@ import {
   todayInKigaliIso,
   type CooperativeFormValues,
 } from './cooperativeFormSchema'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 const DUE_DAYS = Array.from(
@@ -269,7 +270,7 @@ export function CooperativeFormDialog({
                 )}
               />
             </Stack>
-            <TextField
+            <MoneyField
               label={t('cooperatives.fields.monthlyContributionAmount')}
               required
               fullWidth

@@ -67,4 +67,14 @@ public interface LoanRepaymentRepository
             """)
     boolean existsLaterActiveRepayment(
             @Param("loanId") UUID loanId, @Param("repaymentId") UUID repaymentId, @Param("after") java.time.Instant after);
+
+    /** True when the repayment was posted from a member payment (it is corrected by reversing that payment instead). */
+    @Query(value = "SELECT COUNT(*) FROM member_payment_postings WHERE loan_repayment_id = :id", nativeQuery = true)
+    long countMemberPaymentPostings(@Param("id") UUID id);
+
+    /** True when the repayment came from a member credit applied to the loan. */
+    @Query(value = "SELECT COUNT(*) FROM member_credit_entries WHERE applied_loan_repayment_id = :id", nativeQuery = true)
+    long countMemberCreditApplications(@Param("id") UUID id);
+
+    List<LoanRepayment> findByRevisionOfIdIn(java.util.Collection<UUID> ids);
 }

@@ -33,6 +33,7 @@ import rw.terimbere.csams.modules.loan.dto.LoanRejectRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentCreateRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentPreviewRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRepaymentResponse;
+import rw.terimbere.csams.modules.loan.dto.LoanRepaymentReviseRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanRequestCreateRequest;
 import rw.terimbere.csams.modules.loan.dto.LoanResponse;
 import rw.terimbere.csams.modules.loan.dto.LoanScheduleResponse;
@@ -194,6 +195,19 @@ public class LoanController {
             HttpServletRequest httpRequest) {
         return ResponseEntity.ok(
                 ApiResponse.ok(loanService.recordRepayment(cooperativeId, loanId, request, httpRequest)));
+    }
+
+    @PostMapping("/{loanId}/repayments/{repaymentId}/revise")
+    @PreAuthorize("hasAuthority('LOAN_WRITE')")
+    @Operation(summary = "Revise a recorded repayment: the wrong one is reversed (kept on record) and the corrected one recorded with the reason")
+    public ResponseEntity<ApiResponse<LoanRepaymentResponse>> reviseRepayment(
+            @PathVariable UUID cooperativeId,
+            @PathVariable UUID loanId,
+            @PathVariable UUID repaymentId,
+            @Valid @RequestBody LoanRepaymentReviseRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(
+                ApiResponse.ok(loanService.reviseRepayment(cooperativeId, loanId, repaymentId, request, httpRequest)));
     }
 
     @GetMapping("/{loanId}/repayments")

@@ -5,6 +5,7 @@ export { LoanSchedulePreview } from './LoanSchedulePreview'
 export { LoanSettingsPanel } from './LoanSettingsPanel'
 export { GuarantorRequestsPanel } from './GuarantorRequestsPanel'
 export { RepaymentDialog } from './RepaymentDialog'
+export { ReviseRepaymentDialog } from './ReviseRepaymentDialog'
 export {
   loanStatusColor,
   loanStatusLabelKey,

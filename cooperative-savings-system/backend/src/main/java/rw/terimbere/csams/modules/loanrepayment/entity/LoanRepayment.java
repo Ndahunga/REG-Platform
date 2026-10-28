@@ -86,6 +86,14 @@ public class LoanRepayment {
     @Column(name = "reversed_by")
     private UUID reversedBy;
 
+    /** Set on a corrected repayment: the repayment it replaces (which is reversed). */
+    @Column(name = "revision_of_id", updatable = false)
+    private UUID revisionOfId;
+
+    /** Why the earlier repayment was revised. */
+    @Column(name = "revision_reason", length = 500, updatable = false)
+    private String revisionReason;
+
     public boolean isReversed() {
         return reversedAt != null;
     }

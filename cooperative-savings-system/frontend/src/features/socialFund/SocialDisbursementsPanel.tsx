@@ -51,6 +51,7 @@ import {
   toSocialDisbursementPayload,
   type SocialDisbursementFormValues,
 } from './socialFundFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface SocialDisbursementsPanelProps {
   cooperativeId: string
@@ -357,7 +358,7 @@ export function SocialDisbursementsPanel({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
+            <MoneyField
               label={t('socialFund.fields.amount')}
               error={Boolean(errors.amount)}
               helperText={errors.amount?.message}

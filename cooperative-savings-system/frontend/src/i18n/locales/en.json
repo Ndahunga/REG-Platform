@@ -1755,7 +1755,19 @@
       "emptyTitle": "No repayments yet",
       "emptyDescription": "Record a repayment once the loan is active.",
       "success": "Repayment recorded",
-      "maxHint": "Outstanding balance: {{amount}}"
+      "maxHint": "Outstanding balance: {{amount}}",
+      "revise": "Revise",
+      "reviseTitle": "Revise repayment",
+      "reviseHelp": "The repayment of {{amount}} on {{date}} will be given back to the loan and kept in the history as revised. Enter what was really paid.",
+      "correctAmount": "Correct amount",
+      "reviseReason": "Reason for the revision",
+      "reviseReasonHelp": "For the audit trail, e.g. typed 53,000 instead of 530,000.",
+      "reviseSubmit": "Save revision",
+      "revised": "Repayment revised",
+      "revisedChip": "Revised",
+      "reversedChip": "Reversed",
+      "correctionChip": "Correction",
+      "correctionOf": "Replaces {{amount}}: {{reason}}"
     },
     "schedule": {
       "title": "Repayment schedule",

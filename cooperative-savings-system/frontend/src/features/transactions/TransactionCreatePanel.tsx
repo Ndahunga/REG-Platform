@@ -24,6 +24,7 @@ import {
   transactionCreateSchema,
   type TransactionCreateFormValues,
 } from './transactionFormSchemas'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface TransactionCreatePanelProps {
   cooperativeId: string
@@ -147,7 +148,7 @@ export function TransactionCreatePanel({ cooperativeId }: TransactionCreatePanel
           </TextField>
         ) : null}
 
-        <TextField
+        <MoneyField
           label={t('transactions.fields.amount')}
           {...register('amount')}
           error={Boolean(errors.amount)}

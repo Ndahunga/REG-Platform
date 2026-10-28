@@ -36,6 +36,7 @@ import { formatMoney } from '@/shared/utils/formatMoney'
 import { ErrorNotice, periodLabel } from './PaymentParts'
 import { isPositiveAmount, verificationNeedsReference } from './paymentHelpers'
 import { ReasonConfirmDialog } from './ReasonConfirmDialog'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface LegacyReconciliationPanelProps {
   cooperativeId: string
@@ -301,7 +302,7 @@ function RequestDialog({ cooperativeId, candidate, onClose, onDone }: RequestDia
               max: formatMoney(candidate.unreconciledAmount),
             })}
           </Typography>
-          <TextField
+          <MoneyField
             label={t('payments.columns.amount')}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

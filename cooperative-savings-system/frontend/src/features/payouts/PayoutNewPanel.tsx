@@ -34,6 +34,7 @@ import {
   type PayoutPreviewFormValues,
 } from './payoutFormSchemas'
 import { formatPayoutPercentage, sumPayoutAmounts } from './payoutHelpers'
+import { MoneyField } from '@/shared/components/MoneyField'
 
 interface PayoutNewPanelProps {
   cooperativeId: string
@@ -230,7 +231,7 @@ export function PayoutNewPanel({ cooperativeId }: PayoutNewPanelProps) {
             </Alert>
           )}
 
-          <TextField
+          <MoneyField
             label={t('payouts.fields.payoutPoolAmount')}
             {...form.register('payoutPoolAmount')}
             error={Boolean(form.formState.errors.payoutPoolAmount)}
