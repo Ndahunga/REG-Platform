@@ -405,12 +405,12 @@ describe('LoanRequestPanel input validation', { timeout: 30_000 }, () => {
 
   it('does not submit an invalid amount and keeps what was typed', async () => {
     await openForm()
-    await userEvent.type(amountField(), 'abc')
+    await userEvent.type(amountField(), '12.34567')
     await userEvent.type(screen.getByLabelText(/purpose/i), 'Farm inputs')
     await userEvent.click(submitButton())
-    expect(await screen.findByText('Enter a valid amount')).toBeInTheDocument()
+    expect(await screen.findByText(/at most 4 decimal/)).toBeInTheDocument()
     expect(createLoanMock).not.toHaveBeenCalled()
-    expect(amountField()).toHaveValue('abc')
+    expect(amountField()).toHaveValue('12.34567')
   })
 
   it('does not submit a term above 600 months', async () => {
