@@ -283,7 +283,7 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
           />
         </Stack>
         {isLocked(line) ? (
-          <Typography variant="caption" color="text.secondary" data-testid="contribution-row-locked">
+          <Typography variant="caption" component="div" color="text.secondary" data-testid="contribution-row-locked">
             {t(`contributions.lock.${contributionLineLock(line)}`, {
               status: t(`contributions.status.${line.status}`, { defaultValue: String(line.status) }),
             })}
@@ -432,17 +432,25 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
           elevation={0}
           sx={{ border: '1px solid', borderColor: 'divider' }}
         >
-          <Table size="small">
+          <Table
+            size="small"
+            sx={{
+              minWidth: 1180,
+              tableLayout: 'fixed',
+              '& td, & th': { verticalAlign: 'top', py: 1.5 },
+              '& th': { whiteSpace: 'nowrap', fontWeight: 600 },
+            }}
+          >
             <TableHead>
               <TableRow>
-                <TableCell>{t('contributions.fields.member')}</TableCell>
-                <TableCell>{t('contributions.fields.expected')}</TableCell>
-                <TableCell>{t('contributions.fields.paid')}</TableCell>
-                <TableCell>{t('contributions.fields.outstanding')}</TableCell>
-                <TableCell>{t('contributions.fields.status')}</TableCell>
-                <TableCell>{t('contributions.fields.paymentDate')}</TableCell>
-                <TableCell>{t('contributions.fields.reference')}</TableCell>
-                <TableCell>{t('contributions.fields.notes')}</TableCell>
+                <TableCell sx={{ width: 260 }}>{t('contributions.fields.member')}</TableCell>
+                <TableCell sx={{ width: 120 }} align="right">{t('contributions.fields.expected')}</TableCell>
+                <TableCell sx={{ width: 150 }}>{t('contributions.fields.paid')}</TableCell>
+                <TableCell sx={{ width: 120 }} align="right">{t('contributions.fields.outstanding')}</TableCell>
+                <TableCell sx={{ width: 130 }}>{t('contributions.fields.status')}</TableCell>
+                <TableCell sx={{ width: 170 }}>{t('contributions.fields.paymentDate')}</TableCell>
+                <TableCell sx={{ width: 150 }}>{t('contributions.fields.reference')}</TableCell>
+                <TableCell sx={{ width: 180 }}>{t('contributions.fields.notes')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -474,24 +482,25 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
                         {name}
                       </Typography>
                       {isLocked(line) ? (
-                        <Typography variant="caption" color="text.secondary" data-testid="contribution-row-locked">
+                        <Typography variant="caption" component="div" color="text.secondary" data-testid="contribution-row-locked">
                           {t(`contributions.lock.${contributionLineLock(line)}`, {
                             status: t(`contributions.status.${line.status}`, { defaultValue: String(line.status) }),
                           })}
                         </Typography>
                       ) : null}
                       {line.username && line.username !== name ? (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" component="div" color="text.secondary">
                           {line.username}
                         </Typography>
                       ) : null}
                       <ObligationDetails fields={line} />
                     </TableCell>
-                    <TableCell>{formatMoney(line.expectedAmount)}</TableCell>
-                    <TableCell sx={{ minWidth: 110 }}>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap', pt: 2.5 }}>{formatMoney(line.expectedAmount)}</TableCell>
+                    <TableCell>
                       {canWrite && !isLocked(line) ? (
                         <MoneyField
                           size="small"
+                          fullWidth
                           value={line.paidAmountInput}
                           onChange={(e) =>
                             updateLine(line.memberUserId, { paidAmountInput: e.target.value })
@@ -506,18 +515,19 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
                         formatMoney(line.paidAmount)
                       )}
                     </TableCell>
-                    <TableCell>{formatMoney(outstanding)}</TableCell>
-                    <TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap', pt: 2.5 }}>{formatMoney(outstanding)}</TableCell>
+                    <TableCell sx={{ pt: 2.25 }}>
                       <Chip
                         size="small"
                         color={contributionStatusColor(status)}
                         label={t(`contributions.status.${status}`, { defaultValue: status })}
                       />
                     </TableCell>
-                    <TableCell sx={{ minWidth: 140 }}>
+                    <TableCell>
                       {canWrite && !isLocked(line) ? (
                         <TextField
                           size="small"
+                          fullWidth
                           type="date"
                           value={line.paymentDateInput}
                           onChange={(e) =>
@@ -534,10 +544,11 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
                         line.paymentDate || '—'
                       )}
                     </TableCell>
-                    <TableCell sx={{ minWidth: 120 }}>
+                    <TableCell>
                       {canWrite && !isLocked(line) ? (
                         <TextField
                           size="small"
+                          fullWidth
                           value={line.paymentReferenceInput}
                           onChange={(e) =>
                             updateLine(line.memberUserId, {
@@ -552,10 +563,11 @@ export function MonthlyEntryPanel({ cooperativeId, canWrite }: MonthlyEntryPanel
                         line.paymentReference || '—'
                       )}
                     </TableCell>
-                    <TableCell sx={{ minWidth: 140 }}>
+                    <TableCell>
                       {canWrite && !isLocked(line) ? (
                         <TextField
                           size="small"
+                          fullWidth
                           value={line.notesInput}
                           onChange={(e) =>
                             updateLine(line.memberUserId, { notesInput: e.target.value })
