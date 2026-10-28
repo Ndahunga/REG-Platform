@@ -32,6 +32,7 @@ import { PaymentsPage } from '@/pages/PaymentsPage'
 import { RotationPage } from '@/pages/RotationPage'
 import { PayoutDetailPage } from '@/pages/PayoutDetailPage'
 import { ReportsPage } from '@/pages/ReportsPage'
+import { ReconciliationPage } from '@/pages/ReconciliationPage'
 import { HistoricalImportPage } from '@/pages/HistoricalImportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { BillingPage } from '@/pages/BillingPage'
@@ -112,6 +113,7 @@ export function AppRouter() {
               <Route path={ROUTES.payments} element={<PaymentsPage />} />
               <Route path={ROUTES.rotation} element={<RotationPage />} />
               <Route path={ROUTES.reports} element={<ReportsPage />} />
+              <Route path={ROUTES.reconciliation} element={<ReconciliationPage />} />
               <Route path={ROUTES.billing} element={<BillingPage />} />
               <Route path={ROUTES.billingPaymentReturn} element={<PaymentReturnPage />} />
               <Route element={<RoleRoute roles={[...LEADERSHIP_ROLES]} />}>
@@ -161,6 +163,7 @@ export function AppRouter() {
                   <Route path="/superadmin/cooperatives/:cooperativeId/payments" element={<PaymentsPage />} />
                   <Route path="/superadmin/cooperatives/:cooperativeId/rotation" element={<RotationPage />} />
                   <Route path="/superadmin/cooperatives/:cooperativeId/reports" element={<ReportsPage />} />
+                  <Route path="/superadmin/cooperatives/:cooperativeId/reconciliation" element={<ReconciliationPage />} />
                   <Route path="/superadmin/cooperatives/:cooperativeId/billing" element={<BillingPage />} />
                   <Route path="/superadmin/cooperatives/:cooperativeId/billing/payment-return" element={<PaymentReturnPage />} />
                   <Route path="/superadmin/cooperatives/:cooperativeId/historical-import" element={<HistoricalImportPage />} />

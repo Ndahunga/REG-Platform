@@ -141,8 +141,23 @@ public class TrustedTransactionService {
 
     // ------------------------------------------------------------------ core
 
+    /**
+     * Records the statement line a member payment was reconciled with, as imported by the officer who uploaded the
+     * statement. Mobile money paid into the scheme's bank account appears on the bank statement, so a bank statement line
+     * may stand for a mobile-money payment here.
+     */
+    public Outcome recordFromStatement(UUID cooperativeId, VerificationSource source, PaymentMethod channel, String reference,
+            BigDecimal amount, String currency, Instant transactedAt, UUID uploadedBy) {
+        return record(cooperativeId, new Candidate(source, channel, reference, amount, currency, ProviderStatus.SUCCESS, transactedAt,
+                null, null, null, null, uploadedBy), uploadedBy, true);
+    }
+
     Outcome record(UUID cooperativeId, Candidate c, UUID actorId) {
-        validate(c);
+        return record(cooperativeId, c, actorId, false);
+    }
+
+    private Outcome record(UUID cooperativeId, Candidate c, UUID actorId, boolean statementOfPayment) {
+        validate(c, statementOfPayment);
         String normalized = PaymentReferenceNormalizer.normalize(c.reference());
         Outcome outcome;
         try {
@@ -213,7 +228,7 @@ public class TrustedTransactionService {
         return new Outcome(c.reference(), Result.CONFLICT, "CONFLICTING_RECORD", existing.getId());
     }
 
-    private static void validate(Candidate c) {
+    private static void validate(Candidate c, boolean statementOfPayment) {
         if (c.source() == null || !c.source().recordsTransactions()) {
             throw new BusinessException("INVALID_TRUSTED_SOURCE", "The source of a trusted transaction is required");
         }
@@ -221,7 +236,8 @@ public class TrustedTransactionService {
             throw new BusinessException("INVALID_CHANNEL", "A trusted transaction needs an electronic channel");
         }
         boolean fits = switch (c.source()) {
-            case BANK_STATEMENT_IMPORT -> c.channel() == PaymentMethod.BANK_TRANSFER || c.channel() == PaymentMethod.OTHER;
+            case BANK_STATEMENT_IMPORT -> c.channel() == PaymentMethod.BANK_TRANSFER || c.channel() == PaymentMethod.OTHER
+                    || (statementOfPayment && (c.channel() == PaymentMethod.MTN_MOMO || c.channel() == PaymentMethod.AIRTEL_MONEY));
             case MOBILE_MONEY_STATEMENT_IMPORT -> c.channel() == PaymentMethod.MTN_MOMO
                     || c.channel() == PaymentMethod.AIRTEL_MONEY
                     || c.channel() == PaymentMethod.OTHER;

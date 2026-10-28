@@ -1,5 +1,6 @@
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import FavoriteIcon from '@mui/icons-material/Favorite'
@@ -251,6 +252,14 @@ export const adminModuleNavItems: NavItem[] = [
     labelKey: 'nav.reports',
     path: ROUTES.reports,
     icon: AssessmentIcon,
+    roles: STAFF_ROLES,
+    group: 'main',
+    sidebarGroup: 'finance',
+  },
+  {
+    labelKey: 'nav.reconciliation',
+    path: ROUTES.reconciliation,
+    icon: FactCheckIcon,
     roles: STAFF_ROLES,
     group: 'main',
     sidebarGroup: 'finance',

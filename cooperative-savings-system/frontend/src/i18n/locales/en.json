@@ -334,7 +334,8 @@
     "pinSidebar": "Pin sidebar",
     "unpinSidebar": "Unpin sidebar",
     "openNavigation": "Open navigation",
-    "payments": "Payments"
+    "payments": "Payments",
+    "reconciliation": "Reconciliation"
   },
   "login": {
     "title": "Sign in",
@@ -455,8 +456,10 @@
       "password": "PASSWORD",
       "payout": "PAYOUT",
       "invest": "INVEST",
-      "social": "SOCIAL"
-    }
+      "social": "SOCIAL",
+      "reconcile": "RECONCILE"
+    },
+    "reconciliation": "Reconcile statements"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -3123,6 +3126,10 @@
     "payments": {
       "title": "Payments",
       "description": "Submit one payment for several months and loans, follow its review, and (for officers) verify and post it."
+    },
+    "reconciliation": {
+      "title": "Reconciliation",
+      "description": "Bank and mobile money statements matched with the scheme's payments and ledger."
     }
   },
   "historicalImport": {
@@ -4408,6 +4415,99 @@
         "CURRENT": "Current",
         "SUPERSEDED": "Replaced"
       }
+    }
+  },
+  "reconciliation": {
+    "selectCooperativeTitle": "Select a Saving Scheme",
+    "selectCooperativeDescription": "Choose a Saving Scheme to reconcile its statements.",
+    "viewOnly": "You can view the reconciliation. Only the Accountant, the President and the Vice President can upload statements and change matches.",
+    "status": {
+      "MATCHED": "Matched",
+      "CONFIRMED": "Confirmed",
+      "SUGGESTED": "To confirm",
+      "UNMATCHED": "Needs review",
+      "EXPLAINED": "Explained"
+    },
+    "source": {
+      "BANK": "Bank",
+      "MOBILE_MONEY": "Mobile money"
+    },
+    "categories": {
+      "BANK_CHARGE": "Bank charge",
+      "BANK_INTEREST": "Bank interest",
+      "TRANSFER_BETWEEN_ACCOUNTS": "Transfer between the scheme's accounts",
+      "RECORDED_ELSEWHERE": "Recorded another way",
+      "NOT_SCHEME_MONEY": "Not scheme money",
+      "OTHER": "Other"
+    },
+    "balanceCheck": "On {{date}} the statement shows {{bank}} RWF and the app shows {{app}} RWF in cash. Difference: {{difference}} RWF.",
+    "notOnStatementCount": "{{count}} payments or ledger entries in the statement periods are not on any statement line yet.",
+    "uploadTitle": "Upload a statement",
+    "uploadHelp": "PDF, Excel or CSV from the bank or mobile money. Lines already uploaded are skipped, so overlapping statements are fine.",
+    "upload": "Choose file",
+    "uploading": "Reading…",
+    "uploaded": "Statement read: {{lines}} lines, {{fresh}} new.",
+    "acceptAll": "Accept all suggestions ({{count}})",
+    "matchAgain": "Match again",
+    "verifyPayments": "Verify reconciled payments",
+    "confirmedAll": "{{count}} suggestions confirmed.",
+    "rematched": "Lines matched again.",
+    "verifyResult": "{{verified}} of {{total}} payments verified from the statement.",
+    "tabs": {
+      "todo": "To review ({{count}})",
+      "statements": "Statements ({{count}})",
+      "done": "Reconciled"
+    },
+    "fields": {
+      "file": "File",
+      "period": "Period",
+      "in": "Money in",
+      "out": "Money out",
+      "closing": "Closing balance",
+      "lines": "Lines",
+      "uploadedBy": "Uploaded by",
+      "source": "Source",
+      "account": "Account (optional)",
+      "date": "Date",
+      "narration": "Narration",
+      "amount": "Amount",
+      "status": "Status",
+      "with": "Matched with",
+      "actions": "Actions",
+      "category": "Reason",
+      "note": "Note"
+    },
+    "noStatements": "No statement uploaded yet.",
+    "noLines": "Nothing here.",
+    "automatic": "automatic",
+    "suggested": "Suggested",
+    "confirm": "Confirm",
+    "link": "Link",
+    "explain": "Explain",
+    "undo": "Undo",
+    "linkTitle": "Link this line to records",
+    "noCandidates": "No unmatched records with a close date.",
+    "linkSum": "Chosen: {{chosen}} of {{line}} RWF",
+    "explainTitle": "Explain this line",
+    "noteRequired": "A note is required for this reason.",
+    "notOnStatementTitle": "In the app but not on this statement ({{count}})",
+    "notOnStatementHelp": "Payments and ledger entries of the statement period that no line accounts for.",
+    "nothingMissing": "Every record of the period is on the statement.",
+    "errors": {
+      "AMOUNTS_DIFFER": "The chosen records do not add up to the line's amount.",
+      "INVALID_CATEGORY": "Choose a reason from the list.",
+      "LINE_ALREADY_RECONCILED": "This line is already reconciled. Undo it first.",
+      "LINE_USED_AS_EVIDENCE": "A payment was verified with this line, so it cannot be undone.",
+      "NOTE_REQUIRED": "Add a note for this reason.",
+      "NOTHING_TO_CONFIRM": "There is no suggestion to confirm on this line.",
+      "NOTHING_TO_LINK": "Choose at least one record.",
+      "PAYMENT_HAS_NO_REFERENCE": "The payment has no transaction reference.",
+      "RECORD_ALREADY_RECONCILED": "One of the records is already matched to another line.",
+      "STATEMENT_ALREADY_UPLOADED": "This file was already uploaded.",
+      "STATEMENT_EMPTY": "No transaction lines were found in this file.",
+      "STATEMENT_EVIDENCE_CONFLICT": "A different record of this transaction reference already exists.",
+      "STATEMENT_UNREADABLE": "The file could not be read. Use the bank's PDF, Excel or CSV export.",
+      "WRONG_DIRECTION": "Money in can only be linked to money received, and money out to money paid."
     }
   }
 }

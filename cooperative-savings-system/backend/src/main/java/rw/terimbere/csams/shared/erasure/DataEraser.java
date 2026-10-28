@@ -29,6 +29,9 @@ public class DataEraser {
 
     private static final int CHUNK = 500;
 
+    /** Rows that only link two other rows: they go with either end rather than being left half-empty. */
+    static final java.util.Set<String> ALWAYS_WITH_PARENT = java.util.Set.of("bank_statement_matches");
+
     private final JdbcTemplate jdbc;
     private final DataSource dataSource;
     private volatile DataGraph graph;
@@ -112,7 +115,7 @@ public class DataEraser {
                 if (fresh.isEmpty()) {
                     continue;
                 }
-                if (ref.nullable() && !ref.child().equals(ref.parent())) {
+                if (ref.nullable() && !ref.child().equals(ref.parent()) && !ALWAYS_WITH_PARENT.contains(ref.child())) {
                     plan.empty(ref.child(), ref.column(), fresh);
                 } else {
                     plan.add(ref.child(), fresh);

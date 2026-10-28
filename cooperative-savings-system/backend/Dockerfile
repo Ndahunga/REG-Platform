@@ -9,11 +9,12 @@ COPY src ./src
 RUN mvn -B -DskipTests package
 
 # Debian JRE (not Alpine): PDF generation needs AWT/fontconfig, which Alpine JRE often lacks.
+# Tesseract reads receipt photos and screenshots (without it receipts are reported as unreadable).
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core tesseract-ocr tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --create-home --uid 1001 csams
 

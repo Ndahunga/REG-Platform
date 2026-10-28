@@ -334,7 +334,8 @@
     "pinSidebar": "Gumisha menu",
     "unpinSidebar": "Reka kugumisha menu",
     "openNavigation": "Fungura aho ugenda",
-    "payments": "Ubwishyu"
+    "payments": "Ubwishyu",
+    "reconciliation": "Guhuza konti"
   },
   "login": {
     "title": "Injira",
@@ -455,8 +456,10 @@
       "password": "Umutekano",
       "payout": "Kwishyura",
       "invest": "Shora",
-      "social": "Imibereho"
-    }
+      "social": "Imibereho",
+      "reconcile": "HUZA"
+    },
+    "reconciliation": "Huza raporo za konti"
   },
   "dashboard": {
     "title": "Imbonerahamwe",
@@ -3123,6 +3126,10 @@
     "payments": {
       "title": "Ubwishyu",
       "description": "Ohereza ubwishyu bumwe bukubiyemo amezi menshi n’inguzanyo, ukurikirane isuzuma ryabwo, kandi (ku bayobozi) ubwemeze kandi ubwandike."
+    },
+    "reconciliation": {
+      "title": "Guhuza konti",
+      "description": "Raporo za banki na mobile money zihujwe n'ubwishyu n'ibyanditswe by'ikimina."
     }
   },
   "historicalImport": {
@@ -4408,6 +4415,99 @@
         "CURRENT": "Ikoreshwa ubu",
         "SUPERSEDED": "Yasimbuwe"
       }
+    }
+  },
+  "reconciliation": {
+    "selectCooperativeTitle": "Hitamo Ikimina",
+    "selectCooperativeDescription": "Hitamo Ikimina ugiye guhuza na raporo za banki.",
+    "viewOnly": "Ushobora kureba ihuza. Umucungamari, Perezida na Visi Perezida ni bo bonyine bashobora kohereza raporo no guhindura ihuza.",
+    "status": {
+      "MATCHED": "Byahujwe",
+      "CONFIRMED": "Byemejwe",
+      "SUGGESTED": "Byo kwemeza",
+      "UNMATCHED": "Bikeneye isuzuma",
+      "EXPLAINED": "Byasobanuwe"
+    },
+    "source": {
+      "BANK": "Banki",
+      "MOBILE_MONEY": "Mobile money"
+    },
+    "categories": {
+      "BANK_CHARGE": "Amafaranga ya banki",
+      "BANK_INTEREST": "Inyungu ya banki",
+      "TRANSFER_BETWEEN_ACCOUNTS": "Kwimura hagati ya konti z'ikimina",
+      "RECORDED_ELSEWHERE": "Byanditswe ukundi",
+      "NOT_SCHEME_MONEY": "Si amafaranga y'ikimina",
+      "OTHER": "Ibindi"
+    },
+    "balanceCheck": "Ku wa {{date}} raporo ya banki yerekana {{bank}} RWF naho porogaramu yerekana {{app}} RWF. Itandukaniro: {{difference}} RWF.",
+    "notOnStatementCount": "Ubwishyu cyangwa ibyanditswe {{count}} byo muri ibi bihe ntibiraboneka ku murongo wa raporo.",
+    "uploadTitle": "Ohereza raporo ya konti",
+    "uploadHelp": "PDF, Excel cyangwa CSV ya banki cyangwa mobile money. Imirongo yamaze koherezwa irasimbukwa.",
+    "upload": "Hitamo dosiye",
+    "uploading": "Birasomwa…",
+    "uploaded": "Raporo yasomwe: imirongo {{lines}}, mishya {{fresh}}.",
+    "acceptAll": "Emeza ibyatanzwe byose ({{count}})",
+    "matchAgain": "Ongera uhuze",
+    "verifyPayments": "Emeza ubwishyu bwahujwe",
+    "confirmedAll": "Ibyatanzwe {{count}} byemejwe.",
+    "rematched": "Imirongo yongeye guhuzwa.",
+    "verifyResult": "Ubwishyu {{verified}} kuri {{total}} bwemejwe hakoreshejwe raporo.",
+    "tabs": {
+      "todo": "Byo gusuzuma ({{count}})",
+      "statements": "Raporo ({{count}})",
+      "done": "Byahujwe"
+    },
+    "fields": {
+      "file": "Dosiye",
+      "period": "Igihe",
+      "in": "Ayinjiye",
+      "out": "Ayasohotse",
+      "closing": "Asigaye",
+      "lines": "Imirongo",
+      "uploadedBy": "Yoherejwe na",
+      "source": "Inkomoko",
+      "account": "Konti (si ngombwa)",
+      "date": "Itariki",
+      "narration": "Ibisobanuro",
+      "amount": "Amafaranga",
+      "status": "Imiterere",
+      "with": "Byahujwe na",
+      "actions": "Ibikorwa",
+      "category": "Impamvu",
+      "note": "Icyitonderwa"
+    },
+    "noStatements": "Nta raporo iroherezwa.",
+    "noLines": "Nta kintu gihari.",
+    "automatic": "byikora",
+    "suggested": "Byatanzwe",
+    "confirm": "Emeza",
+    "link": "Huza",
+    "explain": "Sobanura",
+    "undo": "Siba ihuza",
+    "linkTitle": "Huza uyu murongo n'ibyanditswe",
+    "noCandidates": "Nta byanditswe bidahujwe biri hafi y'iyi tariki.",
+    "linkSum": "Byahiswemo: {{chosen}} kuri {{line}} RWF",
+    "explainTitle": "Sobanura uyu murongo",
+    "noteRequired": "Iyi mpamvu isaba icyitonderwa.",
+    "notOnStatementTitle": "Biri muri porogaramu ariko ntibiri kuri iyi raporo ({{count}})",
+    "notOnStatementHelp": "Ubwishyu n'ibyanditswe by'iki gihe bidafite umurongo kuri raporo.",
+    "nothingMissing": "Ibyanditswe byose by'iki gihe biri kuri raporo.",
+    "errors": {
+      "AMOUNTS_DIFFER": "Ibyahiswemo ntibingana n'amafaranga y'umurongo.",
+      "INVALID_CATEGORY": "Hitamo impamvu iri ku rutonde.",
+      "LINE_ALREADY_RECONCILED": "Uyu murongo wamaze guhuzwa. Banza usibe ihuza.",
+      "LINE_USED_AS_EVIDENCE": "Hari ubwishyu bwemejwe hakoreshejwe uyu murongo, ntibishobora gusubizwa inyuma.",
+      "NOTE_REQUIRED": "Ongeraho icyitonderwa kuri iyi mpamvu.",
+      "NOTHING_TO_CONFIRM": "Nta cyatanzwe cyo kwemeza kuri uyu murongo.",
+      "NOTHING_TO_LINK": "Hitamo nibura kimwe.",
+      "PAYMENT_HAS_NO_REFERENCE": "Ubwishyu nta nimero y'igikorwa bufite.",
+      "RECORD_ALREADY_RECONCILED": "Kimwe mu byahiswemo cyamaze guhuzwa n'undi murongo.",
+      "STATEMENT_ALREADY_UPLOADED": "Iyi dosiye yamaze koherezwa.",
+      "STATEMENT_EMPTY": "Nta murongo w'igikorwa wabonetse muri iyi dosiye.",
+      "STATEMENT_EVIDENCE_CONFLICT": "Hari indi nyandiko y'iyi nimero y'igikorwa.",
+      "STATEMENT_UNREADABLE": "Dosiye ntiyasomwe. Koresha PDF, Excel cyangwa CSV ya banki.",
+      "WRONG_DIRECTION": "Ayinjiye ahuzwa n'ayakiriwe gusa, ayasohotse n'ayishyuwe."
     }
   }
 }

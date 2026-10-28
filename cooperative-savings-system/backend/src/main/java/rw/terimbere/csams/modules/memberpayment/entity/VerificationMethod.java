@@ -27,7 +27,8 @@ public enum VerificationMethod {
         Set<VerificationMethod> allowed =
                 switch (paymentMethod) {
                     case CASH -> Set.of(CASH_RECEIPT_CONFIRMED);
-                    case MTN_MOMO, AIRTEL_MONEY -> Set.of(MOBILE_MONEY_RECONCILED, PROVIDER_CONFIRMED);
+                    // mobile money paid into the scheme's bank account shows on the bank statement
+                    case MTN_MOMO, AIRTEL_MONEY -> Set.of(MOBILE_MONEY_RECONCILED, BANK_RECONCILED, PROVIDER_CONFIRMED);
                     case BANK_TRANSFER -> Set.of(BANK_RECONCILED, PROVIDER_CONFIRMED);
                     case OTHER -> Set.of(
                             MOBILE_MONEY_RECONCILED, BANK_RECONCILED, PROVIDER_CONFIRMED, CASH_RECEIPT_CONFIRMED);

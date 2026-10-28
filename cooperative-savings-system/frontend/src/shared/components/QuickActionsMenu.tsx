@@ -7,6 +7,7 @@ import PaymentsIcon from '@mui/icons-material/Payments'
 import SavingsIcon from '@mui/icons-material/Savings'
 import ShowChartIcon from '@mui/icons-material/ShowChart'
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism'
+import FactCheckIcon from '@mui/icons-material/FactCheck'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
   Box,
@@ -32,7 +33,7 @@ import {
   hasAnyRole,
   hasPermission,
   PERMISSION_MEMBERSHIP_MANAGE,
-  SECRETARY_ACCESS_ROLES,
+  SECRETARY_ACCESS_ROLES, STAFF_ROLES,
   type AuthUser,
 } from '@/shared/types/auth'
 
@@ -126,6 +127,17 @@ export const QUICK_ACTIONS: QuickActionItem[] = [
     path: ROUTES.members,
     group: 'quick',
     roles: SECRETARY_ACCESS_ROLES,
+    readNavigation: true,
+  },
+  {
+    id: 'reconciliation',
+    labelKey: 'actions.reconciliation',
+    badgeKey: 'actions.badges.reconcile',
+    badgeColor: 'info',
+    icon: FactCheckIcon,
+    path: ROUTES.reconciliation,
+    group: 'quick',
+    roles: STAFF_ROLES,
     readNavigation: true,
   },
   {
