@@ -457,9 +457,11 @@
       "payout": "PAYOUT",
       "invest": "INVEST",
       "social": "SOCIAL",
-      "reconcile": "RECONCILE"
+      "reconcile": "RECONCILE",
+      "pay": "PAY"
     },
-    "reconciliation": "Reconcile statements"
+    "reconciliation": "Reconcile statements",
+    "payRotationTurn": "Pay a rotation turn"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1112,6 +1114,21 @@
         "NOT_AUTHORIZED": "Not allowed",
         "OTHER": "Not payable now"
       }
+    },
+    "pay": {
+      "pay": "Pay",
+      "title": "Pay {{name}} for {{month}}",
+      "turnAmount": "Turn amount still to pay",
+      "netted": "Overdue contributions kept back",
+      "cashToHand": "Cash to hand over",
+      "partial": "Only {{amount}} can be paid now; {{rest}} stays owed to the member for later.",
+      "steps": "Three steps: request (now), approval by another officer, then confirm the transfer with its reference. Each step appears on this row.",
+      "request": "Request payout of {{amount}}",
+      "requested": "Payout requested; it now waits for approval.",
+      "approve": "Approve {{amount}}",
+      "awaitingApproval": "Awaiting approval",
+      "confirmPaid": "Confirm paid",
+      "awaitingTransfer": "Approved, awaiting transfer"
     }
   },
   "operatingModel": {

@@ -457,9 +457,11 @@
       "payout": "Kwishyura",
       "invest": "Shora",
       "social": "Imibereho",
-      "reconcile": "HUZA"
+      "reconcile": "HUZA",
+      "pay": "ISHYURA"
     },
-    "reconciliation": "Huza raporo za konti"
+    "reconciliation": "Huza raporo za konti",
+    "payRotationTurn": "Ishyura uwo igihe kigezeho"
   },
   "dashboard": {
     "title": "Imbonerahamwe",
@@ -1112,6 +1114,21 @@
         "NOT_AUTHORIZED": "Ntiwemerewe",
         "OTHER": "Ntibishoboka ubu"
       }
+    },
+    "pay": {
+      "pay": "Ishyura",
+      "title": "Ishyura {{name}} ukwezi kwa {{month}}",
+      "turnAmount": "Amafaranga y'igihe cye asigaye",
+      "netted": "Imisanzu itarishyuwe ikurwamo",
+      "cashToHand": "Amafaranga ahabwa",
+      "partial": "Ubu hashobora kwishyurwa {{amount}} gusa; {{rest}} asigara abereyemo umunyamuryango.",
+      "steps": "Intambwe eshatu: gusaba (ubu), kwemezwa n'undi muyobozi, hanyuma kwemeza ko yoherejwe n'inimero yayo. Buri ntambwe igaragara kuri uyu murongo.",
+      "request": "Saba kwishyura {{amount}}",
+      "requested": "Ubwishyu bwasabwe; butegereje kwemezwa.",
+      "approve": "Emeza {{amount}}",
+      "awaitingApproval": "Bitegereje kwemezwa",
+      "confirmPaid": "Emeza ko yishyuwe",
+      "awaitingTransfer": "Byemejwe, bitegereje kohererezwa"
     }
   },
   "operatingModel": {

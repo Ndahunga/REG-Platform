@@ -22,6 +22,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getErrorMessage } from '@/shared/api/client'
 import { fetchMembers } from '@/shared/api/members'
+import { fetchRotationPayouts } from '@/shared/api/rotationPayouts'
 import {
   activateRotationCycle,
   cancelRotationCycle,
@@ -29,6 +30,8 @@ import {
   createRotationCycle,
   createShareCycle,
   fetchRotationCycles,
+  fetchSharePool,
+  fetchTurnEligibility,
   importRotation,
   reassignRotationTurn,
   fetchRotationRecipientChanges,
@@ -38,6 +41,7 @@ import { LoadingState } from '@/shared/components/LoadingState'
 import type { RotationCycle, RotationCycleStatus, RotationPeriod, RotationTurn } from '@/shared/types/rotation'
 import { ShareCycleDialog } from './ShareCycleDialog'
 import { money } from './shareCycle'
+import { TurnPayAction } from './TurnPayAction'
 import { CycleCreateDialog } from './CycleCreateDialog'
 import { ReasonDialog, type RecipientOption } from './ReasonDialog'
 import { memberLabel, monthKey } from './rotationHelpers'
@@ -46,6 +50,8 @@ interface RotationSchedulePanelProps {
   cooperativeId: string
   canManage: boolean
   model?: 'ROTATING' | 'HYBRID'
+  /** The officer may handle payouts: each due turn gets its Pay / Approve / Confirm paid step right here. */
+  payoutStaff?: boolean
 }
 
 function turnColor(state: RotationTurn['state']): 'default' | 'success' | 'warning' | 'info' {
@@ -78,7 +84,7 @@ function statusColor(status: RotationCycleStatus): 'default' | 'success' | 'warn
  * The monthly rotation schedule: one scheduled recipient per month, in the order set when the cycle was created.
  * Every active member can read it; only administrators see the actions. Nothing here moves money.
  */
-export function RotationSchedulePanel({ cooperativeId, canManage, model = 'HYBRID' }: RotationSchedulePanelProps) {
+export function RotationSchedulePanel({ cooperativeId, canManage, model = 'HYBRID', payoutStaff = false }: RotationSchedulePanelProps) {
   const { t } = useTranslation()
   const { enqueueSnackbar } = useSnackbar()
   const queryClient = useQueryClient()
@@ -243,6 +249,8 @@ export function RotationSchedulePanel({ cooperativeId, canManage, model = 'HYBRI
             ) : null}
             {cycle.payoutMode === 'FIXED_PER_SHARE' ? (
               <ShareTurns
+                cooperativeId={cooperativeId}
+                payoutStaff={payoutStaff && cycle.status === 'ACTIVE'}
                 cycle={cycle}
                 canReassign={canManage && editable}
                 onReassign={(turn) => setTurnTarget(turn)}
@@ -392,15 +400,37 @@ export function RotationSchedulePanel({ cooperativeId, canManage, model = 'HYBRI
 
 /** The turns of a share-based cycle: who is paid in which month, how much, and what is still to pay. */
 function ShareTurns({
+  cooperativeId,
+  payoutStaff,
   cycle,
   canReassign,
   onReassign,
 }: {
+  cooperativeId: string
+  payoutStaff: boolean
   cycle: RotationCycle
   canReassign: boolean
   onReassign: (turn: RotationTurn) => void
 }) {
   const { t } = useTranslation()
+  const eligibility = useQuery({
+    queryKey: ['rotation', cooperativeId, 'turn-eligibility'],
+    queryFn: () => fetchTurnEligibility(cooperativeId),
+    enabled: payoutStaff,
+  })
+  const payouts = useQuery({
+    queryKey: ['rotation', cooperativeId, 'payouts', 'all'],
+    queryFn: () => fetchRotationPayouts(cooperativeId),
+    enabled: payoutStaff,
+  })
+  const pool = useQuery({
+    queryKey: ['rotation', cooperativeId, 'share-pool'],
+    queryFn: () => fetchSharePool(cooperativeId),
+    enabled: payoutStaff,
+  })
+  const eligibilityOf = (turnId: string) => (eligibility.data ?? []).find((e) => e.turnId === turnId)
+  const openPayoutOf = (turnId: string) =>
+    (payouts.data ?? []).find((p) => p.rotationTurnId === turnId && (p.status === 'REQUESTED' || p.status === 'APPROVED'))
   const turns = cycle.turns ?? []
   const check = cycle.fundingCheck
   const next = turns.find((turn) => turn.state !== 'PAID')
@@ -456,7 +486,16 @@ function ShareTurns({
                 <TableCell>
                   <Chip size="small" color={turnColor(turn.state)} label={t(`rotation.share.states.${turn.state}`)} />
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                  {payoutStaff ? (
+                    <TurnPayAction
+                      cooperativeId={cooperativeId}
+                      turn={turn}
+                      eligibility={eligibilityOf(turn.id)}
+                      openPayout={openPayoutOf(turn.id)}
+                      pool={pool.data}
+                    />
+                  ) : null}
                   {canReassign && turn.state === 'UPCOMING' ? (
                     <Button size="small" onClick={() => onReassign(turn)}>
                       {t('rotation.recipient.change')}

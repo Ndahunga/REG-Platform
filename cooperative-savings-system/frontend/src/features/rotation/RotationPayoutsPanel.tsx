@@ -235,7 +235,7 @@ export function RotationPayoutsPanel({ cooperativeId, staff }: RotationPayoutsPa
   )
 }
 
-function ConfirmDisbursementDialog({
+export function ConfirmDisbursementDialog({
   cooperativeId,
   payout,
   onClose,

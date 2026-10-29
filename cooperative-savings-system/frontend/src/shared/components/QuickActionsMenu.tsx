@@ -33,6 +33,7 @@ import {
   hasAnyRole,
   hasPermission,
   PERMISSION_MEMBERSHIP_MANAGE,
+  PERMISSION_PAYOUT_WRITE,
   SECRETARY_ACCESS_ROLES, STAFF_ROLES,
   type AuthUser,
 } from '@/shared/types/auth'
@@ -139,6 +140,16 @@ export const QUICK_ACTIONS: QuickActionItem[] = [
     group: 'quick',
     roles: STAFF_ROLES,
     readNavigation: true,
+  },
+  {
+    id: 'pay-rotation-turn',
+    labelKey: 'actions.payRotationTurn',
+    badgeKey: 'actions.badges.pay',
+    badgeColor: 'success',
+    icon: PaymentsIcon,
+    path: ROUTES.rotation,
+    group: 'group',
+    permission: PERMISSION_PAYOUT_WRITE,
   },
   {
     id: 'share-out',
