@@ -151,6 +151,7 @@ public class IncomeExpenseService {
 
         rw.terimbere.csams.modules.ledger.entity.LedgerEntry entry = postLedger(cooperative, tx, principal.getId());
         if (tx.getStatementLineId() != null && entry != null) {
+            transactionRepository.flush(); // the ledger entry must be in the database before the line refers to it
             reconciliationService.reconcileWithExpense(cooperativeId, tx.getStatementLineId(), entry.getId(), tx.getAmount(), principal.getId());
         }
 
