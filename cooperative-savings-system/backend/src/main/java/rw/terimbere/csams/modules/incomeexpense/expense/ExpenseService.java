@@ -172,7 +172,7 @@ public class ExpenseService {
         }
         StoredFileResponse stored = files.storeDocument(cooperativeId, file, "INCOME_EXPENSE_DOCUMENT", me, ip(http), agent(http));
         String note = ExpenseEvidenceCheck.MISMATCH.equals(check.check()) ? explanation : check.note();
-        IncomeExpenseTransaction tx = transactions.save(IncomeExpenseTransaction.builder()
+        IncomeExpenseTransaction tx = transactions.saveAndFlush(IncomeExpenseTransaction.builder()
                 .cooperativeId(cooperativeId)
                 .category(IncomeExpenseCategory.GENERAL_EXPENSE)
                 .amount(MoneyUtils.scaleForStorage(amount))
@@ -207,7 +207,7 @@ public class ExpenseService {
             }
             Map<String, Object> l = jdbc.queryForMap("select l.transaction_date, l.narration, l.amount, l.reference, s.storage_key, s.original_filename"
                     + " from bank_statement_lines l join bank_statements s on s.id = l.statement_id where l.id = ?", lineId);
-            IncomeExpenseTransaction tx = transactions.save(IncomeExpenseTransaction.builder()
+            IncomeExpenseTransaction tx = transactions.saveAndFlush(IncomeExpenseTransaction.builder()
                     .cooperativeId(cooperativeId)
                     .category(IncomeExpenseCategory.GENERAL_EXPENSE)
                     .amount(MoneyUtils.scaleForStorage(new BigDecimal(l.get("amount").toString())))
