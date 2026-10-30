@@ -335,7 +335,8 @@
     "unpinSidebar": "Reka kugumisha menu",
     "openNavigation": "Fungura aho ugenda",
     "payments": "Ubwishyu",
-    "reconciliation": "Guhuza konti"
+    "reconciliation": "Guhuza konti",
+    "expenses": "Amafaranga yakoreshejwe"
   },
   "login": {
     "title": "Injira",
@@ -458,10 +459,12 @@
       "invest": "Shora",
       "social": "Imibereho",
       "reconcile": "HUZA",
-      "pay": "ISHYURA"
+      "pay": "ISHYURA",
+      "expense": "ASOHOKA"
     },
     "reconciliation": "Huza raporo za konti",
-    "payRotationTurn": "Ishyura uwo igihe kigezeho"
+    "payRotationTurn": "Ishyura uwo igihe kigezeho",
+    "recordExpense": "Andika amafaranga yakoreshejwe"
   },
   "dashboard": {
     "title": "Imbonerahamwe",
@@ -3163,6 +3166,10 @@
     "reconciliation": {
       "title": "Guhuza konti",
       "description": "Raporo za banki na mobile money zihujwe n'ubwishyu n'ibyanditswe by'ikimina."
+    },
+    "expenses": {
+      "title": "Amafaranga yakoreshejwe",
+      "description": "Ibyo ikimina gikoresha n'inyandiko zibigaragaza, n'amafaranga ya banki ari kuri raporo."
     }
   },
   "historicalImport": {
@@ -4541,6 +4548,80 @@
       "STATEMENT_EVIDENCE_CONFLICT": "Hari indi nyandiko y'iyi nimero y'igikorwa.",
       "STATEMENT_UNREADABLE": "Dosiye ntiyasomwe. Koresha PDF, Excel cyangwa CSV ya banki.",
       "WRONG_DIRECTION": "Ayinjiye ahuzwa n'ayakiriwe gusa, ayasohotse n'ayishyuwe."
+    }
+  },
+  "expenses": {
+    "selectCooperativeTitle": "Hitamo Ikimina",
+    "selectCooperativeDescription": "Hitamo Ikimina urebe amafaranga cyakoresheje.",
+    "pending": "Bitegereje kwemezwa ({{count}})",
+    "thisMonth": "Byemejwe uku kwezi",
+    "thisYear": "Byemejwe uyu mwaka",
+    "recordTitle": "Andika amafaranga yakoreshejwe",
+    "recordHelp": "Ongeraho inyemezabuguzi cyangwa fagitire. Irasomwa, amafaranga yanditseho akagereranywa n'ayo wanditse; uwemeza abona igisubizo.",
+    "attach": "Ongeraho inyandiko",
+    "save": "Andika",
+    "saveWithExplanation": "Andika n'iki gisobanuro",
+    "reading": "Inyandiko irasomwa…",
+    "explanation": "Impamvu amafaranga atandukanye n'ari ku nyandiko",
+    "recorded": "Byanditswe; bitegereje kwemezwa.",
+    "recordedMatch": "Byanditswe: inyandiko igaragaza amafaranga amwe. Bitegereje kwemezwa.",
+    "chargesTitle": "Amafaranga ya banki ari kuri raporo ({{count}})",
+    "chargesHelp": "Amafaranga banki yakuyeho ari kuri raporo zoherejwe muri Guhuza konti. Raporo ni yo nyandiko ibigaragaza; nibimara kwemezwa, buri kimwe gihuzwa n'umurongo wacyo.",
+    "uploadStatement": "Ohereza raporo",
+    "selectAll": "Hitamo byose",
+    "recordCharges": "Andika {{count}}: {{amount}} RWF",
+    "chargesRecorded": "Amafaranga ya banki {{count}} yanditswe; ategereje kwemezwa.",
+    "noCharges": "Nta mafaranga ya banki atanditse ari kuri raporo.",
+    "none": "Nta mafaranga yakoreshejwe aranditswe.",
+    "viewDocument": "Reba inyandiko",
+    "recordedBy": "Byanditswe na {{name}}",
+    "approvedBy": "byemejwe na {{name}}",
+    "approve": "Emeza",
+    "reject": "Anga",
+    "approved": "Byemejwe kandi byinjiye mu bitabo.",
+    "rejectTitle": "Anga aya mafaranga",
+    "rejectReason": "Impamvu",
+    "fields": {
+      "date": "Itariki",
+      "type": "Ubwoko",
+      "description": "Icyo yakoreshejwe",
+      "amount": "Amafaranga (RWF)",
+      "reference": "Inimero (si ngombwa)",
+      "document": "Inyandiko",
+      "status": "Imiterere"
+    },
+    "status": {
+      "PENDING": "Bitegereje kwemezwa",
+      "APPROVED": "Byemejwe",
+      "REJECTED": "Byanzwe"
+    },
+    "check": {
+      "MATCH": "Inyandiko irahura",
+      "MISMATCH": "Inyandiko igaragaza {{amount}}",
+      "UNREADABLE": "Reba inyandiko n'amaso",
+      "STATEMENT_LINE": "Umurongo wa raporo ya banki"
+    },
+    "types": {
+      "BANK_CHARGE": "Amafaranga ya banki",
+      "MEETING": "Inama",
+      "MEALS_AND_REFRESHMENTS": "Amafunguro n'ibinyobwa",
+      "TRANSPORT": "Urugendo",
+      "STATIONERY_AND_PRINTING": "Ibikoresho byo mu biro no gucapa",
+      "COMMUNICATION": "Itumanaho",
+      "VENUE": "Aho inama yabereye",
+      "SUPPORT_AND_GIFTS": "Inkunga n'impano",
+      "OTHER": "Ibindi"
+    },
+    "errors": {
+      "EVIDENCE_REQUIRED": "Ongeraho inyemezabuguzi cyangwa fagitire.",
+      "DESCRIPTION_REQUIRED": "Vuga icyo amafaranga yakoreshejwe.",
+      "INVALID_EXPENSE_TYPE": "Hitamo ubwoko.",
+      "DATE_IN_FUTURE": "Itariki ntishobora kuba iri imbere.",
+      "FILE_TOO_LARGE": "Inyandiko igomba kuba munsi ya MB 10.",
+      "BANK_CHARGE_FROM_STATEMENT": "Andika amafaranga ya banki uhereye ku mirongo iri hasi.",
+      "INSUFFICIENT_AVAILABLE_FUNDS": "Ikimina nticyifitiye amafaranga ahagije.",
+      "NOTHING_TO_RECORD": "Hitamo amafaranga ya banki wandika.",
+      "LINE_NOT_A_CHARGE_TO_RECORD": "Umwe mu mirongo wamaze kwandikwa."
     }
   }
 }

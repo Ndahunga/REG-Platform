@@ -70,4 +70,26 @@ public class IncomeExpenseTransaction extends BaseEntity {
 
     @Column(name = "rejection_reason", length = 2000)
     private String rejectionReason;
+
+    /** For a scheme expense: BANK_CHARGE, MEETING, MEALS_AND_REFRESHMENTS, TRANSPORT, ... (see ExpenseService.TYPES). */
+    @Column(name = "expense_type", length = 40)
+    private String expenseType;
+
+    /** What reading the supporting document found: MATCH, MISMATCH, UNREADABLE or STATEMENT_LINE (bank charges). */
+    @Column(name = "evidence_check", length = 24)
+    private String evidenceCheck;
+
+    @Column(name = "evidence_amount_read", precision = 19, scale = 4)
+    private BigDecimal evidenceAmountRead;
+
+    /** The recorder's explanation when the document's amount differs, or what the reader could not do. */
+    @Column(name = "evidence_note", length = 500)
+    private String evidenceNote;
+
+    @Column(name = "evidence_file_name", length = 255)
+    private String evidenceFileName;
+
+    /** A bank charge: the bank statement line it comes from. */
+    @Column(name = "statement_line_id")
+    private UUID statementLineId;
 }

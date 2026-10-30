@@ -47,6 +47,7 @@ public class IncomeExpenseService {
     private final AuditService auditService;
     private final rw.terimbere.csams.modules.fundlock.SchemeFundLockService fundLockService;
     private final rw.terimbere.csams.shared.financial.LedgerFinancialCalculationService financialCalculationService;
+    private final rw.terimbere.csams.modules.reconciliation.ReconciliationService reconciliationService;
 
     @Transactional(readOnly = true)
     public PageResponse<IncomeExpenseResponse> list(
@@ -148,7 +149,10 @@ public class IncomeExpenseService {
         tx.setApprovedAt(Instant.now());
         tx = transactionRepository.save(tx);
 
-        postLedger(cooperative, tx, principal.getId());
+        rw.terimbere.csams.modules.ledger.entity.LedgerEntry entry = postLedger(cooperative, tx, principal.getId());
+        if (tx.getStatementLineId() != null && entry != null) {
+            reconciliationService.reconcileWithExpense(cooperativeId, tx.getStatementLineId(), entry.getId(), tx.getAmount(), principal.getId());
+        }
 
         auditService.record(
                 principal.getId(),
@@ -200,7 +204,7 @@ public class IncomeExpenseService {
         return toResponse(tx);
     }
 
-    private void postLedger(Cooperative cooperative, IncomeExpenseTransaction tx, UUID actorId) {
+    private rw.terimbere.csams.modules.ledger.entity.LedgerEntry postLedger(Cooperative cooperative, IncomeExpenseTransaction tx, UUID actorId) {
         LedgerTransactionType type;
         BigDecimal debit = BigDecimal.ZERO;
         BigDecimal credit = BigDecimal.ZERO;
@@ -231,7 +235,7 @@ public class IncomeExpenseService {
             default -> throw new BusinessException("Unsupported category: " + tx.getCategory());
         }
 
-        ledgerService.appendApproved(LedgerService.AppendRequest.builder()
+        return ledgerService.appendApproved(LedgerService.AppendRequest.builder()
                 .cooperativeId(tx.getCooperativeId())
                 .transactionType(type)
                 .debitAmount(debit)

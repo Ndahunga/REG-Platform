@@ -1207,9 +1207,18 @@ public class LoanService {
         BigDecimal existingAmount = BigDecimal.ZERO;
         BigDecimal repaid = BigDecimal.ZERO;
         BigDecimal outstanding = BigDecimal.ZERO;
+        // principal still owed on loans running, plus loans requested or approved but not yet paid out: it uses up the
+        // member's limit
+        BigDecimal limitUsed = BigDecimal.ZERO;
         for (Loan open : openLoans) {
             if (excludeLoanId != null && excludeLoanId.equals(open.getId())) {
                 continue;
+            }
+            if (open.getStatus() == LoanStatus.ACTIVE || open.getStatus() == LoanStatus.OVERDUE) {
+                limitUsed = limitUsed.add(open.getOutstandingPrincipal() == null ? BigDecimal.ZERO : open.getOutstandingPrincipal());
+            } else {
+                BigDecimal pending = open.getApprovedAmount() != null ? open.getApprovedAmount() : open.getRequestedAmount();
+                limitUsed = limitUsed.add(pending == null ? BigDecimal.ZERO : pending);
             }
             BigDecimal principal = open.getPrincipalAmount() != null
                     ? open.getPrincipalAmount()
@@ -1236,12 +1245,10 @@ public class LoanService {
                                 : BigDecimal.ZERO);
             }
         }
-        boolean hasOpen = openLoans.stream()
-                .anyMatch(open -> excludeLoanId == null || !excludeLoanId.equals(open.getId()));
-        boolean eligible = !hasOpen;
-        String reason = eligible
-                ? "Member is eligible for a new loan"
-                : "Member already has an outstanding or in-progress loan";
+        // A member may hold more than one loan: each goes through the usual approval, and together they stay within the
+        // member's limit (by shares and by the scheme's maximum).
+        boolean eligible = true;
+        String reason = "Member is eligible for a new loan";
 
         CooperativeMembership membership = membershipRepository
                 .findByCooperativeIdAndUserId(cooperativeId, memberUserId)
@@ -1273,6 +1280,15 @@ public class LoanService {
                 maxByShares = perShareMax;
             }
         }
+        BigDecimal fullLimit = effectiveMax;
+        if (effectiveMax != null && limitUsed.signum() > 0) {
+            effectiveMax = effectiveMax.subtract(limitUsed).max(BigDecimal.ZERO);
+            if (eligible && effectiveMax.signum() <= 0) {
+                eligible = false;
+                reason = "Member has reached the loan limit (" + MoneyUtils.scale(fullLimit) + ") with "
+                        + MoneyUtils.scale(limitUsed) + " still owed or requested on other loans";
+            }
+        }
         if (eligible && settings.isBlockWhenContributionOverdue() && hasOverdueContribution(cooperativeId, memberUserId)) {
             eligible = false;
             reason = "Member has a contribution past its due date; it must be paid before a new loan";
@@ -1281,7 +1297,11 @@ public class LoanService {
                 && MoneyUtils.scaleForStorage(requestedAmount).compareTo(MoneyUtils.scaleForStorage(effectiveMax))
                         > 0) {
             eligible = false;
-            reason = maxByShares != null
+            reason = limitUsed.signum() > 0
+                    ? "Requested amount exceeds what is left of this member's loan limit: " + MoneyUtils.scale(effectiveMax)
+                            + " (limit " + MoneyUtils.scale(fullLimit) + " less " + MoneyUtils.scale(limitUsed)
+                            + " still owed or requested on other loans)"
+                    : maxByShares != null
                     ? "Requested amount exceeds the loan level for this member's share percentage (maximum "
                             + MoneyUtils.scale(effectiveMax)
                             + ")"

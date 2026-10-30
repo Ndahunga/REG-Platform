@@ -490,10 +490,11 @@ class LoanControllerIntegrationTest {
     }
 
     @Test
-    void outstandingLoanBlocksNewRequest() throws Exception {
+    void anotherLoanIsAllowedWithinWhatIsLeftOfTheLimit() throws Exception {
         fundGroup(5000.0000);
         requestApproveDisburse(1000.0000);
 
+        // limit 100,000: 1,000 still owed, so a second loan of 400 goes to the usual approval
         mockMvc.perform(post("/api/v1/cooperatives/" + cooperativeId + "/loans")
                         .header("Authorization", "Bearer " + superAdminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -503,6 +504,26 @@ class LoanControllerIntegrationTest {
                                   "amount": 400.0000,
                                   "termMonths": 3,
                                   "purpose": "Second loan"
+                                }
+                                """.formatted(memberUserId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
+
+        // 1,000 owed + 400 requested: only 98,600 is left
+        mockMvc.perform(get("/api/v1/cooperatives/" + cooperativeId + "/loans/eligibility")
+                        .param("memberUserId", memberUserId.toString())
+                        .header("Authorization", "Bearer " + superAdminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.maxEligibleAmount").value(98600.0));
+        mockMvc.perform(post("/api/v1/cooperatives/" + cooperativeId + "/loans")
+                        .header("Authorization", "Bearer " + superAdminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "memberUserId": "%s",
+                                  "amount": 99000.0000,
+                                  "termMonths": 3,
+                                  "purpose": "Third loan, too much"
                                 }
                                 """.formatted(memberUserId)))
                 .andExpect(status().isUnprocessableEntity());

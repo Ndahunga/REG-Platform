@@ -8,6 +8,7 @@ import SavingsIcon from '@mui/icons-material/Savings'
 import ShowChartIcon from '@mui/icons-material/ShowChart'
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism'
 import FactCheckIcon from '@mui/icons-material/FactCheck'
+import RequestPageIcon from '@mui/icons-material/RequestPage'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
   Box,
@@ -138,6 +139,17 @@ export const QUICK_ACTIONS: QuickActionItem[] = [
     icon: FactCheckIcon,
     path: ROUTES.reconciliation,
     group: 'quick',
+    roles: STAFF_ROLES,
+    readNavigation: true,
+  },
+  {
+    id: 'record-expense',
+    labelKey: 'actions.recordExpense',
+    badgeKey: 'actions.badges.expense',
+    badgeColor: 'warning',
+    icon: RequestPageIcon,
+    path: ROUTES.expenses,
+    group: 'group',
     roles: STAFF_ROLES,
     readNavigation: true,
   },

@@ -335,7 +335,8 @@
     "unpinSidebar": "Unpin sidebar",
     "openNavigation": "Open navigation",
     "payments": "Payments",
-    "reconciliation": "Reconciliation"
+    "reconciliation": "Reconciliation",
+    "expenses": "Expenses"
   },
   "login": {
     "title": "Sign in",
@@ -458,10 +459,12 @@
       "invest": "INVEST",
       "social": "SOCIAL",
       "reconcile": "RECONCILE",
-      "pay": "PAY"
+      "pay": "PAY",
+      "expense": "EXPENSE"
     },
     "reconciliation": "Reconcile statements",
-    "payRotationTurn": "Pay a rotation turn"
+    "payRotationTurn": "Pay a rotation turn",
+    "recordExpense": "Record an expense"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -3163,6 +3166,10 @@
     "reconciliation": {
       "title": "Reconciliation",
       "description": "Bank and mobile money statements matched with the scheme's payments and ledger."
+    },
+    "expenses": {
+      "title": "Expenses",
+      "description": "What the scheme spends, with its supporting documents, and bank charges from the statement."
     }
   },
   "historicalImport": {
@@ -4541,6 +4548,80 @@
       "STATEMENT_EVIDENCE_CONFLICT": "A different record of this transaction reference already exists.",
       "STATEMENT_UNREADABLE": "The file could not be read. Use the bank's PDF, Excel or CSV export.",
       "WRONG_DIRECTION": "Money in can only be linked to money received, and money out to money paid."
+    }
+  },
+  "expenses": {
+    "selectCooperativeTitle": "Select a Saving Scheme",
+    "selectCooperativeDescription": "Choose a Saving Scheme to see its expenses.",
+    "pending": "Waiting for approval ({{count}})",
+    "thisMonth": "Approved this month",
+    "thisYear": "Approved this year",
+    "recordTitle": "Record an expense",
+    "recordHelp": "Attach the receipt, invoice or bill. It is read and its amount compared with what you enter; the approver sees the result.",
+    "attach": "Attach document",
+    "save": "Record expense",
+    "saveWithExplanation": "Record with this explanation",
+    "reading": "Reading the document…",
+    "explanation": "Why the amount differs from the document",
+    "recorded": "Expense recorded; it waits for approval.",
+    "recordedMatch": "Expense recorded: the document shows the same amount. It waits for approval.",
+    "chargesTitle": "Bank charges on statements ({{count}})",
+    "chargesHelp": "Charges taken by the bank on the statements uploaded in Reconciliation. The statement is their supporting document; once approved, each one reconciles its statement line.",
+    "uploadStatement": "Upload a statement",
+    "selectAll": "Select all",
+    "recordCharges": "Record {{count}} charge(s): {{amount}} RWF",
+    "chargesRecorded": "{{count}} bank charge(s) recorded; they wait for approval.",
+    "noCharges": "No unrecorded bank charges on the uploaded statements.",
+    "none": "No expense recorded yet.",
+    "viewDocument": "View document",
+    "recordedBy": "Recorded by {{name}}",
+    "approvedBy": "approved by {{name}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approved": "Expense approved and posted.",
+    "rejectTitle": "Reject this expense",
+    "rejectReason": "Reason",
+    "fields": {
+      "date": "Date",
+      "type": "Type",
+      "description": "What it was for",
+      "amount": "Amount (RWF)",
+      "reference": "Reference (optional)",
+      "document": "Document",
+      "status": "Status"
+    },
+    "status": {
+      "PENDING": "Waiting for approval",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected"
+    },
+    "check": {
+      "MATCH": "Document matches",
+      "MISMATCH": "Document shows {{amount}}",
+      "UNREADABLE": "Check document by eye",
+      "STATEMENT_LINE": "Bank statement line"
+    },
+    "types": {
+      "BANK_CHARGE": "Bank charge",
+      "MEETING": "Meeting",
+      "MEALS_AND_REFRESHMENTS": "Meals and refreshments",
+      "TRANSPORT": "Transport",
+      "STATIONERY_AND_PRINTING": "Stationery and printing",
+      "COMMUNICATION": "Airtime and communication",
+      "VENUE": "Venue",
+      "SUPPORT_AND_GIFTS": "Support and gifts",
+      "OTHER": "Other"
+    },
+    "errors": {
+      "EVIDENCE_REQUIRED": "Attach the receipt, invoice or bill.",
+      "DESCRIPTION_REQUIRED": "Say what the expense was for.",
+      "INVALID_EXPENSE_TYPE": "Choose an expense type.",
+      "DATE_IN_FUTURE": "The date cannot be in the future.",
+      "FILE_TOO_LARGE": "The document must be 10 MB or smaller.",
+      "BANK_CHARGE_FROM_STATEMENT": "Record bank charges from the statement lines below.",
+      "INSUFFICIENT_AVAILABLE_FUNDS": "The scheme does not have enough available funds for this expense.",
+      "NOTHING_TO_RECORD": "Choose the bank charges to record.",
+      "LINE_NOT_A_CHARGE_TO_RECORD": "One of the lines is already accounted for."
     }
   }
 }

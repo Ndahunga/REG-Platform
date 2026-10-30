@@ -424,6 +424,27 @@ public class ReconciliationService {
         return lines(cooperativeId, "l.id = ?", lineId).get(0);
     }
 
+    /**
+     * A bank charge recorded as an expense from its statement line: once the expense is approved its ledger entry
+     * reconciles the line. A line already linked to something else is left as it is.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void reconcileWithExpense(UUID cooperativeId, UUID lineId, UUID ledgerEntryId, BigDecimal amount, UUID actorId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("select status from bank_statement_lines where id = ? and cooperative_id = ? for update",
+                lineId, cooperativeId);
+        if (rows.isEmpty()) {
+            return;
+        }
+        Long linked = jdbc.queryForObject("select count(*) from bank_statement_matches where line_id = ?", Long.class, lineId);
+        if (linked != null && linked > 0) {
+            return;
+        }
+        jdbc.update("insert into bank_statement_matches (id, cooperative_id, line_id, payment_id, ledger_entry_id, amount, how, matched_by, matched_at)"
+                + " values (?, ?, ?, null, ?, ?, 'OFFICER', ?, now())", UUID.randomUUID(), cooperativeId, lineId, ledgerEntryId, amount, actorId);
+        jdbc.update("update bank_statement_lines set status = 'CONFIRMED', category = null, note = null, suggestion = null,"
+                + " decided_by = ?, decided_at = now() where id = ?", actorId, lineId);
+    }
+
     private void link(UUID cooperativeId, UUID lineId, List<StatementMatcher.Candidate> targets, String how, UUID actorId) {
         for (StatementMatcher.Candidate t : targets) {
             Long used = jdbc.queryForObject("select count(*) from bank_statement_matches where " + ("PAYMENT".equals(t.kind()) ? "payment_id" : "ledger_entry_id")
